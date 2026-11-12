@@ -1,0 +1,4 @@
+-- Baseline for Chipbook.
+--
+-- The ledger schema arrives in the next migration. Keeping this first
+-- migration lets `supabase db push` establish migration history.
