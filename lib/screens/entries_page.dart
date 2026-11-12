@@ -9,18 +9,31 @@ import 'add_entry_page.dart';
 
 /// Shows the running total, approved entries, and pending entries.
 class EntriesPage extends StatelessWidget {
-  const EntriesPage({super.key, required this.controller});
+  const EntriesPage({super.key, required this.controller, this.onSignOut});
 
   final LedgerController controller;
+  final Future<void> Function()? onSignOut;
 
   @override
   Widget build(BuildContext context) {
+    final signOut = onSignOut;
+
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
         final summary = controller.summary;
         return Scaffold(
-          appBar: AppBar(title: const Text(AppInfo.name)),
+          appBar: AppBar(
+            title: const Text(AppInfo.name),
+            actions: [
+              if (signOut != null)
+                IconButton(
+                  onPressed: signOut,
+                  tooltip: 'Sign out',
+                  icon: const Icon(Icons.logout),
+                ),
+            ],
+          ),
           body: _buildBody(summary),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _openAddEntry(context),

@@ -34,6 +34,8 @@ Migrations live in `supabase/migrations/`. Create one with
 
 In **Authentication > URL Configuration**, set the Site URL to
 `http://127.0.0.1:8080` and add `http://127.0.0.1:8080/**` as a redirect URL.
+Email magic links are enabled by default, so no extra provider setup is
+needed; links expire after one hour.
 
 ## Run it
 
