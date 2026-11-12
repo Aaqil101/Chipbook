@@ -1,34 +1,19 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'package:chipbook/app_info.dart';
 import 'package:chipbook/main.dart';
+import 'package:chipbook/repositories/entry_repository.dart';
+import 'package:chipbook/state/ledger_controller.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('shows the empty ledger state', (tester) async {
+    final controller = LedgerController(InMemoryEntryRepository());
+    await controller.load();
 
-    // The display name comes from the single AppInfo constant.
+    await tester.pumpWidget(ChipbookApp(controller: controller));
+
     expect(find.text(AppInfo.name), findsOneWidget);
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('No entries yet'), findsOneWidget);
+    expect(find.text('Add entry'), findsOneWidget);
   });
 }
