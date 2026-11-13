@@ -25,13 +25,14 @@ any credentials; follow the setup below to connect your own.
 
 | Role      | Can do                                                        |
 | --------- | ------------------------------------------------------------- |
-| Organizer | Invite, approve, record payouts, reverse, change roles, remove members, archive or delete a fund |
+| Organizer | Invite, approve, delete pending entries, record payouts, reverse, change roles, remove members, archive or delete a fund |
 | Member    | Add entries (pending until approved) and view the ledger      |
 | Observer  | View the ledger only                                          |
 
-Entries are append-only: nobody can edit or delete one. A correction is a new
-entry that reverses the original, and the original stays visible. Only
-approved entries count toward a total.
+Approved entries are append-only: nobody can edit or delete one. A correction is
+a new entry that reverses the original, and the original stays visible. An
+organizer may delete a pending entry that was never approved, since it never
+counted toward a total. Only approved entries count toward a total.
 
 A contribution adds to the fund. A payout records money leaving it, such as
 paying a supplier at the end of a collection; the organizer must give a payee
@@ -192,7 +193,7 @@ Only the publishable key belongs in a client build. Never add a
 
 - `lib/models/` — `Entry`, `Fund`, `Membership`, `Invite`, `MemberRole`; money
   is always an integer `amountMinor`.
-- `lib/domain/` — append-only totals, payouts, and reversals, per-currency
+- `lib/domain/` — approved-entry totals, payouts, and reversals, per-currency
   grouping, currency catalog, money parsing/formatting, and validation.
 - `lib/repositories/` — interfaces for entries, funds, memberships, and
   invites, plus Supabase implementations. Tests use the in-memory entry store.
@@ -200,8 +201,8 @@ Only the publishable key belongs in a client build. Never add a
   ledger.
 - `lib/screens/` — sign-in, fund shell, ledger, add-entry form, members page,
   and dialogs.
-- `supabase/migrations/` — schema, append-only and last-organizer triggers,
-  invite acceptance, fund archival, and RLS policies.
+- `supabase/migrations/` — schema, approval, immutable-entry, and
+  last-organizer triggers, invite acceptance, fund archival, and RLS policies.
 - `supabase/tests/rls_test.sql` — executable role and RLS suite.
 
 The database is the authority for roles and immutability: RLS limits reads and

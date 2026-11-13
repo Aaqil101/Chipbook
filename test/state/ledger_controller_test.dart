@@ -42,6 +42,49 @@ void main() {
     expect(controller.summary.approved.single.id, entry.id);
   });
 
+  test('deleting a pending entry removes it from the ledger', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+    final entry = await controller.addEntry(
+      amountMinor: 2500,
+      contributorName: 'Ada',
+    );
+    await controller.deletePending(entry.id);
+
+    expect(controller.entries, isEmpty);
+    expect(controller.summary.pending, isEmpty);
+    expect(controller.summary.balanceMinorFor('USD'), 0);
+  });
+
+  test('rejects deleting an approved entry', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+    final entry = await controller.addEntry(
+      amountMinor: 2500,
+      contributorName: 'Ada',
+      status: EntryStatus.approved,
+    );
+
+    await expectLater(controller.deletePending(entry.id), throwsArgumentError);
+    expect(controller.summary.approved, hasLength(1));
+  });
+
+  test('rejects deleting an unknown entry', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+
+    await expectLater(controller.deletePending('missing'), throwsArgumentError);
+  });
+
   test('a reversal is approved immediately and reduces the total', () async {
     final repository = InMemoryEntryRepository();
     final controller = LedgerController(

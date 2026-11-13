@@ -102,6 +102,26 @@ class LedgerController extends ChangeNotifier {
     await _reload();
   }
 
+  /// Deletes a pending entry. Organizers only, enforced by the backend.
+  ///
+  /// Approved entries cannot be deleted; correct them with [reverse] instead.
+  Future<void> deletePending(String entryId) async {
+    final index = _entries.indexWhere((entry) => entry.id == entryId);
+    if (index == -1) {
+      throw ArgumentError.value(entryId, 'entryId', 'no such entry');
+    }
+    if (_entries[index].isApproved) {
+      throw ArgumentError.value(
+        entryId,
+        'entryId',
+        'only pending entries can be deleted',
+      );
+    }
+
+    await _repository.deletePending(fundId: fundId, entryId: entryId);
+    await _reload();
+  }
+
   /// Records a new approved entry that reverses [target].
   ///
   /// Reversals carry the original amount, contributor, currency, and kind, so

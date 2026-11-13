@@ -969,7 +969,7 @@ select pg_temp.assert_eq(
     where id = 'e2222222-2222-4222-8222-222222222222'
   ),
   1,
-  'entries cannot be deleted through RLS'
+  'approved entries cannot be deleted through RLS'
 );
 
 delete from public.entries
@@ -982,7 +982,7 @@ select pg_temp.assert_eq(
     where id = 'e2222222-2222-4222-8222-222222222222'
   ),
   1,
-  'entries remain after a delete attempt'
+  'approved entries remain after a delete attempt'
 );
 
 reset role;
@@ -1012,9 +1012,94 @@ select pg_temp.assert_raises_message(
     delete from public.entries
     where id = 'e2222222-2222-4222-8222-222222222222'
   $stmt$,
-  'entries cannot be deleted',
-  'the database blocks entry deletion'
+  'approved entries cannot be deleted',
+  'the database blocks deletion of approved entries'
 );
+
+-- ---------------------------------------------------------------------------
+-- Pending entries: an organizer may discard one; approved rows stay put.
+-- ---------------------------------------------------------------------------
+
+select set_config(
+  'request.jwt.claim.sub',
+  '22222222-2222-4222-8222-222222222222',
+  true
+);
+set local role authenticated;
+
+insert into public.entries (
+  id, fund_id, amount_minor, currency, contributor_name, status
+) values (
+  'e9999999-9999-4999-8999-999999999999',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  1500, 'USD', 'Member mistake', 'pending'
+);
+
+delete from public.entries
+where id = 'e9999999-9999-4999-8999-999999999999';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.entries
+    where id = 'e9999999-9999-4999-8999-999999999999'
+  ),
+  1,
+  'a member cannot delete a pending entry, even their own'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '33333333-3333-4333-8333-333333333333',
+  true
+);
+
+delete from public.entries
+where id = 'e9999999-9999-4999-8999-999999999999';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.entries
+    where id = 'e9999999-9999-4999-8999-999999999999'
+  ),
+  1,
+  'an observer cannot delete a pending entry'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '11111111-1111-4111-8111-111111111111',
+  true
+);
+
+delete from public.entries
+where id = 'e9999999-9999-4999-8999-999999999999';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.entries
+    where id = 'e9999999-9999-4999-8999-999999999999'
+  ),
+  0,
+  'an organizer can delete a pending entry'
+);
+
+delete from public.entries
+where id = 'e2222222-2222-4222-8222-222222222222';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.entries
+    where id = 'e2222222-2222-4222-8222-222222222222'
+  ),
+  1,
+  'an organizer cannot delete an approved entry'
+);
+
+reset role;
 
 -- ---------------------------------------------------------------------------
 -- Invite write rules and failure paths.
@@ -1356,6 +1441,15 @@ select pg_temp.assert_raises_message(
   'a fund cannot be renamed'
 );
 
+-- A pending row left over from before archival cannot be deleted afterwards.
+insert into public.entries (
+  id, fund_id, amount_minor, currency, contributor_name, status
+) values (
+  'eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  700, 'USD', 'Late change', 'pending'
+);
+
 update public.funds
 set archived_at = now()
 where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -1370,6 +1464,19 @@ select pg_temp.assert_eq(
   ),
   1,
   'an organizer can archive a fund'
+);
+
+delete from public.entries
+where id = 'eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.entries
+    where id = 'eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  ),
+  1,
+  'an archived fund keeps its pending entries'
 );
 
 -- An archived fund keeps its ledger readable but accepts no new records.
@@ -1473,6 +1580,36 @@ select pg_temp.assert_eq(
   ),
   0,
   'an organizer can delete a fund with no entries'
+);
+
+-- Discarding the last pending entry makes the fund deletable.
+insert into public.funds (id, name, default_currency) values (
+  'adadadad-adad-4dad-8dad-adadadadadad',
+  'Draft fund',
+  'USD'
+);
+
+insert into public.entries (
+  id, fund_id, amount_minor, currency, contributor_name, status
+) values (
+  'ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  'adadadad-adad-4dad-8dad-adadadadadad',
+  900, 'USD', 'Draft', 'pending'
+);
+
+delete from public.entries
+where id = 'ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+select public.delete_fund('adadadad-adad-4dad-8dad-adadadadadad');
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'adadadad-adad-4dad-8dad-adadadadadad'
+  ),
+  0,
+  'discarding the last pending entry lets the fund be deleted'
 );
 
 -- The organizer guard must not block the membership cascade.

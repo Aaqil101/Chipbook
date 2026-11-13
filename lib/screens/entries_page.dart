@@ -143,12 +143,40 @@ class EntriesPage extends StatelessWidget {
       permissions: permissions,
       onApprove: (entry) => _approve(context, entry),
       onReverse: (entry) => _reverse(context, entry),
+      onDelete: (entry) => _delete(context, entry),
     );
   }
 
   Future<void> _approve(BuildContext context, Entry entry) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ApproveEntryDialog(entry: entry),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
     try {
       await controller.approve(entry.id);
+    } on Object catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      _showError(context, error);
+    }
+  }
+
+  Future<void> _delete(BuildContext context, Entry entry) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _DeleteEntryDialog(entry: entry),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      await controller.deletePending(entry.id);
     } on Object catch (error) {
       if (!context.mounted) {
         return;
@@ -221,18 +249,21 @@ class _LedgerList extends StatelessWidget {
     required this.permissions,
     required this.onApprove,
     required this.onReverse,
+    required this.onDelete,
   });
 
   final LedgerSummary summary;
   final FundPermissions? permissions;
   final ValueChanged<Entry> onApprove;
   final ValueChanged<Entry> onReverse;
+  final ValueChanged<Entry> onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canApprove = permissions?.canApprove ?? false;
     final canReverse = permissions?.canReverse ?? false;
+    final canDelete = permissions?.canDeleteEntry ?? false;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -246,6 +277,7 @@ class _LedgerList extends StatelessWidget {
             _EntryTile(
               entry: entry,
               onApprove: canApprove ? () => onApprove(entry) : null,
+              onDelete: canDelete ? () => onDelete(entry) : null,
             ),
           const SizedBox(height: 24),
         ],
@@ -373,6 +405,7 @@ class _EntryTile extends StatelessWidget {
     this.isReversed = false,
     this.onApprove,
     this.onReverse,
+    this.onDelete,
   });
 
   final Entry entry;
@@ -382,6 +415,7 @@ class _EntryTile extends StatelessWidget {
 
   final VoidCallback? onApprove;
   final VoidCallback? onReverse;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -389,7 +423,8 @@ class _EntryTile extends StatelessWidget {
     final date = MaterialLocalizations.of(context)
         .formatShortDate(entry.createdAt.toLocal());
     final note = entry.note.trim();
-    final hasActions = onApprove != null || onReverse != null;
+    final hasActions =
+        onApprove != null || onReverse != null || onDelete != null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -461,6 +496,15 @@ class _EntryTile extends StatelessWidget {
                       icon: const Icon(Icons.undo, size: 18),
                       label: const Text('Reverse'),
                     ),
+                  if (onDelete != null)
+                    TextButton.icon(
+                      onPressed: onDelete,
+                      style: TextButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete'),
+                    ),
                 ],
               ),
             ),
@@ -504,6 +548,109 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Confirms approving a pending entry.
+///
+/// Approval is one-way: only pending entries can be deleted, so the warning
+/// tells the organizer that a later mistake must be corrected with a reversal.
+/// Returns true when the approval should go ahead.
+class _ApproveEntryDialog extends StatelessWidget {
+  const _ApproveEntryDialog({required this.entry});
+
+  final Entry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: const Text('Approve entry?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(entry.contributorName, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            Money.format(entry.amountMinor, currency: entry.currency),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Approving makes this entry permanent. It cannot be deleted '
+            'afterwards; a correction has to be recorded as a reversal.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Approve'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Confirms discarding a pending entry.
+///
+/// The entry is shown so the organizer can check they picked the right row.
+/// Returns true when the delete should go ahead.
+class _DeleteEntryDialog extends StatelessWidget {
+  const _DeleteEntryDialog({required this.entry});
+
+  final Entry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: const Text('Delete pending entry?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(entry.contributorName, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            Money.format(entry.amountMinor, currency: entry.currency),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'This entry was never approved. It will be removed permanently, '
+            'without a reversal.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: theme.colorScheme.error,
+            foregroundColor: theme.colorScheme.onError,
+          ),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Delete'),
+        ),
+      ],
     );
   }
 }

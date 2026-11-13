@@ -18,6 +18,12 @@ class FundPermissions {
 
   bool get canApprove => role == MemberRole.organizer;
 
+  /// Deletes a pending entry that was never approved.
+  ///
+  /// The database additionally requires the fund to be active and the entry to
+  /// still be pending.
+  bool get canDeleteEntry => role == MemberRole.organizer;
+
   /// Records money leaving the fund as a payout entry.
   bool get canRecordPayout => role == MemberRole.organizer;
 

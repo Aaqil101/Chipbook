@@ -11,6 +11,7 @@ void main() {
       expect(permissions.canView, isTrue);
       expect(permissions.canAddEntry, isFalse);
       expect(permissions.canApprove, isFalse);
+      expect(permissions.canDeleteEntry, isFalse);
       expect(permissions.canRecordPayout, isFalse);
       expect(permissions.canReverse, isFalse);
       expect(permissions.canManageMembers, isFalse);
@@ -23,6 +24,7 @@ void main() {
       expect(permissions.canView, isTrue);
       expect(permissions.canAddEntry, isTrue);
       expect(permissions.canApprove, isFalse);
+      expect(permissions.canDeleteEntry, isFalse);
       expect(permissions.canRecordPayout, isFalse);
       expect(permissions.canReverse, isFalse);
       expect(permissions.canManageMembers, isFalse);
@@ -35,6 +37,7 @@ void main() {
       expect(permissions.canView, isTrue);
       expect(permissions.canAddEntry, isTrue);
       expect(permissions.canApprove, isTrue);
+      expect(permissions.canDeleteEntry, isTrue);
       expect(permissions.canRecordPayout, isTrue);
       expect(permissions.canReverse, isTrue);
       expect(permissions.canManageMembers, isTrue);

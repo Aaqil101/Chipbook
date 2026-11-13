@@ -126,12 +126,104 @@ void main() {
     await tester.tap(find.text('Approve'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Approve entry?'), findsOneWidget);
+    expect(find.textContaining('cannot be deleted'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Approve'), findsNothing);
     expect(find.text('Pending'), findsNothing);
     expect(find.text('USD 12.50'), findsNWidgets(2));
   });
 
-  testWidgets('members see no approve or reverse controls', (tester) async {
+  testWidgets('cancelling approval leaves the entry pending', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(_entry(id: 'pending', amountMinor: 1250));
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    await tester.tap(find.text('Approve'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('USD 0.00'), findsOneWidget);
+
+    final stored = await entries.getAll(fundId: 'fund-a');
+    expect(stored.single.status, EntryStatus.pending);
+  });
+
+  testWidgets('organizers delete a pending entry after confirming', (
+    tester,
+  ) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(_entry(id: 'pending', amountMinor: 1250));
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete pending entry?'), findsOneWidget);
+    expect(find.text('USD 12.50'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No entries yet'), findsOneWidget);
+    expect(await entries.getAll(fundId: 'fund-a'), isEmpty);
+  });
+
+  testWidgets('cancelling a pending delete keeps the entry', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(_entry(id: 'pending', amountMinor: 1250));
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(await entries.getAll(fundId: 'fund-a'), hasLength(1));
+  });
+
+  testWidgets('approved entries have no delete control', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(id: 'approved', amountMinor: 5000, status: EntryStatus.approved),
+    );
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    expect(find.text('Reverse'), findsOneWidget);
+    expect(find.text('Delete'), findsNothing);
+  });
+
+  testWidgets('members see no approve, reverse, or delete controls', (
+    tester,
+  ) async {
     final entries = InMemoryEntryRepository();
     await entries.add(_entry(id: 'pending', amountMinor: 1250));
     await entries.add(
@@ -147,6 +239,7 @@ void main() {
 
     expect(find.text('Approve'), findsNothing);
     expect(find.text('Reverse'), findsNothing);
+    expect(find.text('Delete'), findsNothing);
     expect(find.text('Add entry'), findsOneWidget);
   });
 
@@ -168,6 +261,7 @@ void main() {
 
     expect(find.text('Approve'), findsNothing);
     expect(find.text('Reverse'), findsNothing);
+    expect(find.text('Delete'), findsNothing);
     expect(find.text('Add entry'), findsNothing);
     expect(find.text('USD 50.00'), findsNWidgets(2));
   });
@@ -506,6 +600,8 @@ void main() {
     expect(find.text('UYU 1,500.00'), findsOneWidget);
 
     await tester.tap(find.text('Approve'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
     await tester.pumpAndSettle();
 
     expect(find.text('UYU 1,500.00'), findsNWidgets(2));

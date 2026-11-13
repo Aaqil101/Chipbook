@@ -66,6 +66,29 @@ class SupabaseEntryRepository implements EntryRepository {
     }
   }
 
+  @override
+  Future<void> deletePending({
+    required String fundId,
+    required String entryId,
+  }) async {
+    try {
+      final rows = await _client
+          .from('entries')
+          .delete()
+          .eq('id', entryId)
+          .eq('fund_id', fundId)
+          .eq('status', 'pending')
+          .select('id');
+      if (rows.isEmpty) {
+        throw const RepositoryException('Entry could not be deleted.');
+      }
+    } on RepositoryException {
+      rethrow;
+    } on Object catch (error) {
+      throw supabaseFailure('Could not delete the entry', error);
+    }
+  }
+
   Entry _entryFromRow(Map<String, dynamic> row) {
     return Entry(
       id: row['id'] as String,

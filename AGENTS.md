@@ -47,8 +47,9 @@ rules.
   run the app (local `http://127.0.0.1:8080` or the deployed URL).
 
 ## Architecture rules
-- Entries are append-only. Never add update or delete. The only permitted
-  mutation is `pending -> approved`; corrections are new entries with
+- Approved entries are append-only. Never add update or delete for them. The
+  only permitted mutations are `pending -> approved` and deleting a pending
+  entry that was never approved; corrections are new entries with
   `reversesEntryId` set.
 - Funds are never destroyed while they hold a ledger. Organizers archive them
   instead; only a fund with no entries may be deleted. Archived funds are

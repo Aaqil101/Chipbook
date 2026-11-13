@@ -126,6 +126,45 @@ void main() {
     );
   });
 
+  test('deletes a pending entry', () async {
+    await repository.add(_entry('a', status: EntryStatus.pending));
+    await repository.add(_entry('b'));
+
+    await repository.deletePending(fundId: _fundId, entryId: 'a');
+
+    final entries = await repository.getAll(fundId: _fundId);
+    expect(entries.map((entry) => entry.id), ['b']);
+  });
+
+  test('rejects deleting an approved entry', () async {
+    await repository.add(_entry('a'));
+
+    await expectLater(
+      repository.deletePending(fundId: _fundId, entryId: 'a'),
+      throwsArgumentError,
+    );
+    expect(await repository.getAll(fundId: _fundId), hasLength(1));
+  });
+
+  test('rejects deleting an entry from another fund', () async {
+    await repository.add(
+      _entry('a', fundId: 'fund-b', status: EntryStatus.pending),
+    );
+
+    await expectLater(
+      repository.deletePending(fundId: _fundId, entryId: 'a'),
+      throwsArgumentError,
+    );
+    expect(await repository.getAll(fundId: 'fund-b'), hasLength(1));
+  });
+
+  test('rejects deleting an unknown entry', () async {
+    await expectLater(
+      repository.deletePending(fundId: _fundId, entryId: 'missing'),
+      throwsArgumentError,
+    );
+  });
+
   test('returned lists cannot mutate the store', () async {
     await repository.add(_entry('a'));
     final entries = await repository.getAll(fundId: _fundId);

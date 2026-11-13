@@ -8,10 +8,12 @@ enum EntryStatus { pending, approved }
 /// Chipbook never moves the money itself.
 enum EntryKind { contribution, payout }
 
-/// A single, immutable ledger record.
+/// A single ledger record.
 ///
-/// Entries are append-only: there is no edit or delete. A correction is a
-/// new entry whose [reversesEntryId] points at the entry it reverses.
+/// Approved entries are append-only: there is no edit or delete for them. A
+/// correction is a new entry whose [reversesEntryId] points at the entry it
+/// reverses. A pending entry that was never approved may be deleted instead,
+/// because it never counted toward a total.
 class Entry {
   const Entry({
     required this.id,

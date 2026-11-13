@@ -1,10 +1,11 @@
 import '../models/entry.dart';
 
-/// Read and append access to ledger entries.
+/// Read, append, and pending-entry access to ledger entries.
 ///
-/// Entries are append-only by design: there is deliberately no update or
-/// delete operation. Implement this interface to swap in a remote store
-/// without changing the rest of the app.
+/// Approved entries are append-only by design: there is deliberately no update
+/// or delete for them. The only permitted mutations are approval and deleting
+/// a pending entry that was never approved. Implement this interface to swap
+/// in a remote store without changing the rest of the app.
 abstract interface class EntryRepository {
   /// Returns every entry in [fundId] in append order.
   Future<List<Entry>> getAll({required String fundId});
@@ -17,8 +18,14 @@ abstract interface class EntryRepository {
 
   /// Approves a pending entry in [fundId].
   ///
-  /// This is the only permitted mutation; financial fields stay immutable.
+  /// Approval leaves the financial fields untouched.
   Future<void> approve({required String fundId, required String entryId});
+
+  /// Deletes a pending entry in [fundId].
+  ///
+  /// Only entries that were never approved can be deleted. Approved entries
+  /// are immutable and must be corrected with a reversal instead.
+  Future<void> deletePending({required String fundId, required String entryId});
 }
 
 /// In-memory [EntryRepository] for local use and tests.
@@ -61,5 +68,26 @@ class InMemoryEntryRepository implements EntryRepository {
       return;
     }
     _entries[index] = entry.copyWith(status: EntryStatus.approved);
+  }
+
+  @override
+  Future<void> deletePending({
+    required String fundId,
+    required String entryId,
+  }) async {
+    final index = _entries.indexWhere(
+      (entry) => entry.fundId == fundId && entry.id == entryId,
+    );
+    if (index == -1) {
+      throw ArgumentError.value(entryId, 'entryId', 'no such entry');
+    }
+    if (_entries[index].status == EntryStatus.approved) {
+      throw ArgumentError.value(
+        entryId,
+        'entryId',
+        'only pending entries can be deleted',
+      );
+    }
+    _entries.removeAt(index);
   }
 }
