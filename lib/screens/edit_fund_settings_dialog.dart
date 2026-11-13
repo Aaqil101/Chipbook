@@ -1,9 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../domain/currency.dart';
 import '../domain/fund_validation.dart';
 import '../domain/money.dart';
 import '../models/fund.dart';
 import '../models/fund_cadence.dart';
+import '../widgets/amount_input_formatter.dart';
 
 /// Values collected by [EditFundSettingsDialog].
 typedef FundSettingsDraft = ({FundCadence cadence, int? targetMinor});
@@ -100,6 +102,13 @@ class _EditFundSettingsDialogState extends State<EditFundSettingsDialog> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
+                inputFormatters: [
+                  AmountInputFormatter(
+                    decimalDigits: CurrencyCatalog.fractionDigitsFor(
+                      widget.fund.defaultCurrency,
+                    ),
+                  ),
+                ],
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   labelText:

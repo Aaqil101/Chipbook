@@ -6,6 +6,7 @@ import '../domain/entry_validation.dart';
 import '../domain/money.dart';
 import '../models/entry.dart';
 import '../state/ledger_controller.dart';
+import '../widgets/amount_input_formatter.dart';
 
 /// Records a new contribution, or a payout when the user is an organizer.
 class AddEntryPage extends StatefulWidget {
@@ -148,6 +149,11 @@ class _AddEntryPageState extends State<AddEntryPage> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: [
+                AmountInputFormatter(
+                  decimalDigits: CurrencyCatalog.fractionDigitsFor(_currency),
+                ),
+              ],
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: 'Amount',

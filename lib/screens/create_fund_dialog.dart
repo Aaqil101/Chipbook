@@ -5,6 +5,7 @@ import '../domain/currency.dart';
 import '../domain/fund_validation.dart';
 import '../domain/money.dart';
 import '../models/fund_cadence.dart';
+import '../widgets/amount_input_formatter.dart';
 import '../widgets/currency_picker_field.dart';
 
 /// Values collected by [CreateFundDialog].
@@ -114,6 +115,11 @@ class _CreateFundDialogState extends State<CreateFundDialog> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
+                inputFormatters: [
+                  AmountInputFormatter(
+                    decimalDigits: CurrencyCatalog.fractionDigitsFor(_currency),
+                  ),
+                ],
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   labelText: 'Target in $_currency (optional)',
