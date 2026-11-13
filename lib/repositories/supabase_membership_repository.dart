@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/member_role.dart';
@@ -23,7 +24,10 @@ class SupabaseMembershipRepository implements MembershipRepository {
       if (rows is! List) {
         throw const RepositoryException('Could not load members.');
       }
-      return rows.cast<Map<String, dynamic>>().map(_membershipFromRow).toList();
+      return rows
+          .cast<Map<String, dynamic>>()
+          .map((row) => parseMemberDirectoryRow(row, fundId))
+          .toList();
     } on RepositoryException {
       rethrow;
     } on Object catch (error) {
@@ -75,14 +79,19 @@ class SupabaseMembershipRepository implements MembershipRepository {
       throw supabaseFailure('Could not remove the member', error);
     }
   }
+}
 
-  Membership _membershipFromRow(Map<String, dynamic> row) {
-    return Membership(
-      fundId: row['fund_id'] as String,
-      userId: row['user_id'] as String,
-      role: MemberRole.fromCode(row['role'] as String),
-      createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
-      email: row['email'] as String?,
-    );
-  }
+/// Builds a [Membership] from a `list_fund_members` row.
+///
+/// The function returns the directory fields but not the fund id, so the fund
+/// that was queried is supplied by the caller.
+@visibleForTesting
+Membership parseMemberDirectoryRow(Map<String, dynamic> row, String fundId) {
+  return Membership(
+    fundId: fundId,
+    userId: row['user_id'] as String,
+    role: MemberRole.fromCode(row['role'] as String),
+    createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
+    email: row['email'] as String?,
+  );
 }
