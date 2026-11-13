@@ -5,6 +5,7 @@ import '../domain/currency.dart';
 import '../domain/fund_validation.dart';
 import '../domain/money.dart';
 import '../models/fund_cadence.dart';
+import '../widgets/currency_picker_field.dart';
 
 /// Values collected by [CreateFundDialog].
 typedef FundDraft = ({
@@ -79,29 +80,12 @@ class _CreateFundDialogState extends State<CreateFundDialog> {
                 validator: (value) => FundValidation.nameError(value ?? ''),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _currency,
-                isExpanded: true,
-                menuMaxHeight: 420,
-                decoration: const InputDecoration(
-                  labelText: 'Default currency',
-                  helperText: 'New entries start in this currency',
-                ),
-                items: [
-                  for (final currency in CurrencyCatalog.currencies)
-                    DropdownMenuItem<String>(
-                      value: currency.code,
-                      child: Text(
-                        currency.label,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (code) {
-                  if (code != null) {
-                    setState(() => _currency = code);
-                  }
-                },
+              CurrencyPickerField(
+                value: _currency,
+                label: 'Default currency',
+                helperText: 'New entries start in this currency',
+                validator: (code) => FundValidation.currencyError(code ?? ''),
+                onChanged: (code) => setState(() => _currency = code),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<FundCadence>(

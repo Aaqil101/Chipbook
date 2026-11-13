@@ -642,7 +642,12 @@ void main() {
     await tester.enterText(find.byType(TextFormField).first, 'Travel fund');
     await tester.tap(find.text('USD · US Dollar'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('UYU · Uruguayan Peso').last);
+    await tester.enterText(
+      find.byKey(const Key('currency-search')),
+      'uruguayan',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('UYU · Uruguayan Peso'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();

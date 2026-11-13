@@ -35,5 +35,17 @@ void main() {
       final sorted = [...codes]..sort();
       expect(codes, sorted);
     });
+
+    test('search matches codes and names case-insensitively', () {
+      expect(CurrencyCatalog.search('yen').single.code, 'JPY');
+      expect(CurrencyCatalog.search('yuan').single.code, 'CNY');
+      expect(CurrencyCatalog.search(' jpy ').single.code, 'JPY');
+      expect(CurrencyCatalog.search('uruguayan').single.code, 'UYU');
+    });
+
+    test('search with no match is empty and blank returns everything', () {
+      expect(CurrencyCatalog.search('zzz'), isEmpty);
+      expect(CurrencyCatalog.search('   '), CurrencyCatalog.currencies);
+    });
   });
 }

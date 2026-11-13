@@ -187,6 +187,23 @@ abstract final class CurrencyCatalog {
   /// Looks up [code] case-insensitively, or returns null for unknown codes.
   static Currency? byCode(String code) => _byCode[code.trim().toUpperCase()];
 
+  /// Currencies whose code or name contains [query], case-insensitively.
+  ///
+  /// An empty query returns the whole catalog in its original order.
+  static List<Currency> search(String query) {
+    final needle = query.trim().toLowerCase();
+    if (needle.isEmpty) {
+      return currencies;
+    }
+    return currencies
+        .where(
+          (currency) =>
+              currency.code.toLowerCase().contains(needle) ||
+              currency.name.toLowerCase().contains(needle),
+        )
+        .toList(growable: false);
+  }
+
   /// ISO 4217 fraction digits for [code], defaulting to two when unknown.
   static int fractionDigitsFor(String code) => byCode(code)?.decimalDigits ?? 2;
 }
