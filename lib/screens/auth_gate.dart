@@ -1,16 +1,23 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../auth/auth_controller.dart';
-import '../state/ledger_controller.dart';
-import 'entries_page.dart';
+import '../repositories/entry_repository.dart';
+import '../repositories/fund_repository.dart';
 import 'sign_in_page.dart';
+import 'signed_in_page.dart';
 
 /// Shows the ledger only when a session exists.
 class AuthGate extends StatelessWidget {
-  const AuthGate({super.key, required this.auth, required this.ledger});
+  const AuthGate({
+    super.key,
+    required this.auth,
+    required this.fundRepository,
+    required this.entryRepository,
+  });
 
   final AuthController auth;
-  final LedgerController ledger;
+  final FundRepository fundRepository;
+  final EntryRepository entryRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +27,11 @@ class AuthGate extends StatelessWidget {
         if (!auth.isSignedIn) {
           return SignInPage(auth: auth);
         }
-        return EntriesPage(controller: ledger, onSignOut: auth.signOut);
+        return SignedInPage(
+          auth: auth,
+          fundRepository: fundRepository,
+          entryRepository: entryRepository,
+        );
       },
     );
   }

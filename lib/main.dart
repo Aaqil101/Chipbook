@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,8 +5,10 @@ import 'app_info.dart';
 import 'auth/auth_controller.dart';
 import 'auth/auth_service.dart';
 import 'repositories/entry_repository.dart';
+import 'repositories/fund_repository.dart';
+import 'repositories/supabase_entry_repository.dart';
+import 'repositories/supabase_fund_repository.dart';
 import 'screens/auth_gate.dart';
-import 'state/ledger_controller.dart';
 import 'supabase_config.dart';
 
 Future<void> main() async {
@@ -24,31 +24,39 @@ Future<void> main() async {
     publishableKey: SupabaseConfig.publishableKey,
   );
 
-  final auth = AuthController(SupabaseAuthService(Supabase.instance.client));
-  final ledger = LedgerController(
-    InMemoryEntryRepository(),
-    fundId: _localFundId,
-  );
-  unawaited(ledger.load());
+  final client = Supabase.instance.client;
 
-  runApp(ChipbookApp(auth: auth, ledger: ledger));
+  runApp(
+    ChipbookApp(
+      auth: AuthController(SupabaseAuthService(client)),
+      fundRepository: SupabaseFundRepository(client),
+      entryRepository: SupabaseEntryRepository(client),
+    ),
+  );
 }
 
-// Temporary scope until fund selection lands; entries stay local for now.
-const _localFundId = 'local-fund';
-
 class ChipbookApp extends StatelessWidget {
-  const ChipbookApp({super.key, required this.auth, required this.ledger});
+  const ChipbookApp({
+    super.key,
+    required this.auth,
+    required this.fundRepository,
+    required this.entryRepository,
+  });
 
   final AuthController auth;
-  final LedgerController ledger;
+  final FundRepository fundRepository;
+  final EntryRepository entryRepository;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppInfo.name,
       theme: _theme(),
-      home: AuthGate(auth: auth, ledger: ledger),
+      home: AuthGate(
+        auth: auth,
+        fundRepository: fundRepository,
+        entryRepository: entryRepository,
+      ),
     );
   }
 }

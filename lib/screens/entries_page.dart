@@ -1,17 +1,31 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../app_info.dart';
 import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../models/entry.dart';
+import '../models/fund.dart';
 import '../state/ledger_controller.dart';
 import 'add_entry_page.dart';
 
+const _newFundAction = '__new_fund__';
+
 /// Shows the running total, approved entries, and pending entries.
 class EntriesPage extends StatelessWidget {
-  const EntriesPage({super.key, required this.controller, this.onSignOut});
+  const EntriesPage({
+    super.key,
+    required this.controller,
+    required this.fundName,
+    this.funds = const <Fund>[],
+    this.onSelectFund,
+    this.onCreateFund,
+    this.onSignOut,
+  });
 
   final LedgerController controller;
+  final String fundName;
+  final List<Fund> funds;
+  final ValueChanged<Fund>? onSelectFund;
+  final VoidCallback? onCreateFund;
   final Future<void> Function()? onSignOut;
 
   @override
@@ -24,8 +38,43 @@ class EntriesPage extends StatelessWidget {
         final summary = controller.summary;
         return Scaffold(
           appBar: AppBar(
-            title: const Text(AppInfo.name),
+            title: Text(fundName, overflow: TextOverflow.ellipsis),
             actions: [
+              if (funds.isNotEmpty &&
+                  (onSelectFund != null || onCreateFund != null))
+                PopupMenuButton<String>(
+                  tooltip: 'Switch fund',
+                  icon: const Icon(Icons.swap_horiz),
+                  onSelected: _handleFundSelection,
+                  itemBuilder: (context) => [
+                    for (final fund in funds)
+                      PopupMenuItem<String>(
+                        value: fund.id,
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              child: fund.id == controller.fundId
+                                  ? const Icon(Icons.check, size: 18)
+                                  : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                fund.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: _newFundAction,
+                      child: Text('New fund'),
+                    ),
+                  ],
+                ),
               if (signOut != null)
                 IconButton(
                   onPressed: signOut,
@@ -61,6 +110,19 @@ class EntriesPage extends StatelessWidget {
         builder: (_) => AddEntryPage(controller: controller),
       ),
     );
+  }
+
+  void _handleFundSelection(String value) {
+    if (value == _newFundAction) {
+      onCreateFund?.call();
+      return;
+    }
+    for (final fund in funds) {
+      if (fund.id == value) {
+        onSelectFund?.call(fund);
+        return;
+      }
+    }
   }
 }
 
