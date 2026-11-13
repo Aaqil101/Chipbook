@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../config.dart';
 import '../domain/currency.dart';
 import '../domain/entry_validation.dart';
 import '../domain/money.dart';
@@ -27,24 +26,16 @@ class AddEntryPage extends StatefulWidget {
 
 class _AddEntryPageState extends State<AddEntryPage> {
   final _formKey = GlobalKey<FormState>();
-  final _amountFieldKey = GlobalKey<FormFieldState<String>>();
   final _amountController = TextEditingController();
   final _nameController = TextEditingController();
   final _noteController = TextEditingController();
-  late String _currency;
   EntryKind _kind = EntryKind.contribution;
   bool _saving = false;
 
   bool get _isPayout => _kind == EntryKind.payout;
 
-  @override
-  void initState() {
-    super.initState();
-    _currency =
-        CurrencyCatalog.byCode(widget.controller.defaultCurrency)?.code ??
-        CurrencyCatalog.byCode(AppConfig.defaultCurrency)?.code ??
-        CurrencyCatalog.currencies.first.code;
-  }
+  /// The fund's currency; every entry is recorded in it.
+  String get _currency => widget.controller.currency;
 
   @override
   void dispose() {
@@ -73,7 +64,6 @@ class _AddEntryPageState extends State<AddEntryPage> {
         amountMinor: amountMinor,
         contributorName: _nameController.text,
         note: _noteController.text,
-        currency: _currency,
         kind: _kind,
       );
       if (!mounted) {
@@ -119,31 +109,24 @@ class _AddEntryPageState extends State<AddEntryPage> {
               ),
               const SizedBox(height: 16),
             ],
-            DropdownButtonFormField<String>(
-              initialValue: _currency,
-              isExpanded: true,
-              menuMaxHeight: 420,
-              decoration: const InputDecoration(labelText: 'Currency'),
-              items: [
-                for (final currency in CurrencyCatalog.currencies)
-                  DropdownMenuItem<String>(
-                    value: currency.code,
-                    child: Text(
-                      currency.label,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            Row(
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Recorded in $_currency, the fund currency',
+                    style: theme.textTheme.bodySmall,
                   ),
+                ),
               ],
-              onChanged: (code) {
-                if (code != null) {
-                  setState(() => _currency = code);
-                  _amountFieldKey.currentState?.validate();
-                }
-              },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             TextFormField(
-              key: _amountFieldKey,
               controller: _amountController,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(

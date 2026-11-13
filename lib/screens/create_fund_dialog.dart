@@ -83,8 +83,8 @@ class _CreateFundDialogState extends State<CreateFundDialog> {
               const SizedBox(height: 16),
               CurrencyPickerField(
                 value: _currency,
-                label: 'Default currency',
-                helperText: 'New entries start in this currency',
+                label: 'Currency',
+                helperText: 'All entries and the target use this currency',
                 validator: (code) => FundValidation.currencyError(code ?? ''),
                 onChanged: (code) => setState(() => _currency = code),
               ),

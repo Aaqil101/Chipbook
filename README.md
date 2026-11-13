@@ -14,7 +14,7 @@ Phase 2 is implemented on a hosted Supabase backend:
 - Organizer payouts for money leaving the fund
 - One-off, weekly, monthly, or yearly fund timing with an optional period target
 - Member management with expiring invite codes
-- Per-currency raised, paid-out, and balance totals
+- One currency per fund, with raised, paid-out, and balance totals
 
 The app is web-first. There are deliberately no `android/` or `ios/`
 directories, and there is no payment, wallet, or custody functionality.
@@ -38,8 +38,8 @@ counted toward a total. Only approved entries count toward a total.
 A contribution adds to the fund. A payout records money leaving it, such as
 paying a supplier at the end of a collection; the organizer must give a payee
 and a reason, and a payout is approved as soon as it is recorded. Totals show
-raised, paid out, and the remaining balance per currency. Chipbook only keeps
-the record; it never moves the money.
+raised, paid out, and the remaining balance in the fund's currency. Chipbook
+only keeps the record; it never moves the money.
 
 A fund can be a one-off collection or repeat weekly, monthly, or yearly. An
 organizer can set an optional target in the fund's default currency, and the
@@ -125,16 +125,16 @@ flutter run -d chrome --dart-define-from-file=.env
 
 1. Sign in with a magic link and create a fund. You become its first organizer.
    Pick a one-off, weekly, monthly, or yearly cadence and an optional target.
-2. Add entries with a currency; new entries start pending.
+2. Add entries; they are recorded in the fund currency and start pending.
 3. Organizers approve pending entries. Approved entries count toward the
-   balance for that currency only.
+   fund balance.
 4. Organizers can record a **Payout** from the add-entry form. It needs a
    payee and a reason, is approved immediately, and reduces the balance. A
    payout larger than the balance warns but is still recorded.
 5. Open **Members** to invite an email with a role, then copy the invite code.
    The invitee signs in with that email and uses **Redeem an invite**.
 6. To correct an approved entry, use **Reverse** and give a reason. The
-   original stays visible and the reversal reduces the same currency's balance.
+   original stays visible and the reversal reduces the fund balance.
 7. Use **Fund settings** in the fund menu to change the **Timing and target**,
    archive the active fund, or delete it when it has no entries. Archived funds
    are listed on the no-funds page, where they can be restored.
@@ -204,8 +204,8 @@ Only the publishable key belongs in a client build. Never add a
 - `lib/models/` — `Entry`, `Fund`, `Membership`, `Invite`, `MemberRole`; money
   is always an integer `amountMinor`.
 - `lib/domain/` — approved-entry totals, payouts, and reversals, cadence
-  periods, per-currency grouping, currency catalog, money parsing/formatting,
-  and validation.
+  periods, currency grouping, currency catalog, money parsing/formatting, and
+  validation.
 - `lib/repositories/` — interfaces for entries, funds, memberships, and
   invites, plus Supabase implementations. Tests use the in-memory entry store.
 - `lib/state/` — `ChangeNotifier` controllers for auth, funds, and the active

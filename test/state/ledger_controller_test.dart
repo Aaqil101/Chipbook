@@ -116,68 +116,65 @@ void main() {
     expect(controller.summary.approved, hasLength(2));
   });
 
-  test('adds entries in the selected currency', () async {
+  test('records entries in the fund currency', () async {
     final repository = InMemoryEntryRepository();
-    final controller = LedgerController(repository, fundId: 'fund-a');
+    final controller = LedgerController(
+      repository,
+      fundId: 'fund-a',
+      currency: 'JPY',
+    );
     addTearDown(controller.dispose);
 
     await controller.load();
-    final usd = await controller.addEntry(
-      amountMinor: 2500,
+    final entry = await controller.addEntry(
+      amountMinor: 1500,
       contributorName: 'Ada',
       status: EntryStatus.approved,
     );
-    final jpy = await controller.addEntry(
-      amountMinor: 1500,
-      contributorName: 'Grace',
-      currency: 'JPY',
-      status: EntryStatus.approved,
-    );
 
-    expect(usd.currency, 'USD');
-    expect(jpy.currency, 'JPY');
-    expect(controller.summary.balanceMinorFor('USD'), 2500);
+    expect(entry.currency, 'JPY');
     expect(controller.summary.balanceMinorFor('JPY'), 1500);
+    expect(controller.summary.balanceMinorFor('USD'), 0);
   });
 
-  test('reversals use the target currency and leave others alone', () async {
+  test('reversals keep the fund currency', () async {
     final repository = InMemoryEntryRepository();
-    final controller = LedgerController(repository, fundId: 'fund-a');
+    final controller = LedgerController(
+      repository,
+      fundId: 'fund-a',
+      currency: 'LKR',
+    );
     addTearDown(controller.dispose);
 
     await controller.load();
-    final usd = await controller.addEntry(
+    final target = await controller.addEntry(
       amountMinor: 5000,
       contributorName: 'Ada',
       status: EntryStatus.approved,
     );
-    await controller.addEntry(
-      amountMinor: 3000,
-      contributorName: 'Grace',
-      currency: 'EUR',
-      status: EntryStatus.approved,
+
+    final reversal = await controller.reverse(
+      target: target,
+      reason: 'Mistake',
     );
 
-    final reversal = await controller.reverse(target: usd, reason: 'Mistake');
-
-    expect(reversal.currency, 'USD');
-    expect(controller.summary.balanceMinorFor('USD'), 0);
-    expect(controller.summary.balanceMinorFor('EUR'), 3000);
+    expect(reversal.currency, 'LKR');
+    expect(controller.summary.balanceMinorFor('LKR'), 0);
   });
 
-  test('rejects unknown currency codes', () async {
+  test('rejects an unsupported fund currency', () async {
     final repository = InMemoryEntryRepository();
-    final controller = LedgerController(repository, fundId: 'fund-a');
+    final controller = LedgerController(
+      repository,
+      fundId: 'fund-a',
+      currency: 'ZZZ',
+    );
     addTearDown(controller.dispose);
 
     await controller.load();
 
     await expectLater(
-      controller.addEntry(
-        amountMinor: 1000,
-        contributorName: 'Ada',
-        currency: 'ZZZ',
-      ),
+      controller.addEntry(amountMinor: 1000, contributorName: 'Ada'),
       throwsArgumentError,
     );
     expect(controller.entries, isEmpty);

@@ -9,7 +9,7 @@ balances, or custody features, ever.
 - Web-first (`flutter run -d chrome` or a web server). No `android/` or `ios/`
   directories by design.
 - Hosted Supabase backend with magic-link auth, funds, per-fund roles,
-  approvals, reversals, invites, and multi-currency entries.
+  approvals, reversals, invites, and entries in the fund currency.
 - Data lives in Supabase. The in-memory entry repository is test-only.
 - Phase 2 is implemented (issues #11-#22); setup and deploy notes are in
   `README.md`.
@@ -54,11 +54,14 @@ rules.
 - Funds are never destroyed while they hold a ledger. Organizers archive them
   instead; only a fund with no entries may be deleted. Archived funds are
   read-only (`is_fund_active` gates every write policy).
-- Reversals keep the target entry's currency and require a reason. Never mix
-  currencies in a total.
+- A fund has one currency, chosen at creation. Every entry, including a
+  reversal, must use it; the database rejects any other code. Reversals keep
+  the target entry's currency and require a reason. Never mix currencies in a
+  total.
 - A payout is an approved organizer entry with `kind = 'payout'`. It reduces
   the balance but not the raised figure, requires a reason, and its reversal
-  keeps the payout kind. Show raised, paid out, and balance per currency.
+  keeps the payout kind. Show raised, paid out, and balance in the fund
+  currency.
 - Money is `int amountMinor` (smallest currency unit). Never use `double` for
   money and never parse amounts through `double`. `CurrencyCatalog` supplies
   ISO 4217 fraction digits; `intl` formats grouped whole units.

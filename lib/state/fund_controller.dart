@@ -183,7 +183,7 @@ class FundController extends ChangeNotifier {
         : LedgerController(
             _entryRepository,
             fundId: fund.id,
-            defaultCurrency: fund.defaultCurrency,
+            currency: fund.defaultCurrency,
           );
 
     if (fund == null) {

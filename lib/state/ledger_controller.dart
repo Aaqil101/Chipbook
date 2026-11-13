@@ -12,7 +12,7 @@ class LedgerController extends ChangeNotifier {
   LedgerController(
     this._repository, {
     required this.fundId,
-    this.defaultCurrency = AppConfig.defaultCurrency,
+    this.currency = AppConfig.defaultCurrency,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
 
@@ -23,8 +23,8 @@ class LedgerController extends ChangeNotifier {
   /// Fund whose entries this controller manages.
   final String fundId;
 
-  /// ISO 4217 code selected by default when adding an entry.
-  final String defaultCurrency;
+  /// ISO 4217 code every entry in this fund is recorded in.
+  final String currency;
 
   List<Entry> _entries = const <Entry>[];
   LedgerSummary? _summary;
@@ -34,10 +34,8 @@ class LedgerController extends ChangeNotifier {
   List<Entry> get entries => _entries;
 
   /// Per-currency totals and the approved/pending split, newest first.
-  LedgerSummary get summary => _summary ??= LedgerSummary.from(
-    _entries,
-    defaultCurrency: defaultCurrency,
-  );
+  LedgerSummary get summary =>
+      _summary ??= LedgerSummary.from(_entries, defaultCurrency: currency);
 
   bool get isLoading => _isLoading;
 
@@ -54,46 +52,29 @@ class LedgerController extends ChangeNotifier {
     }
   }
 
-  /// Appends a new entry and refreshes the exposed state.
+  /// Appends a new entry in the fund's [currency] and refreshes the state.
   ///
-  /// [currency] defaults to [defaultCurrency]. Unknown ISO 4217 codes are
-  /// rejected before anything reaches the repository. A [kind] of
-  /// [EntryKind.payout] that is not a reversal is always approved, because
-  /// paying money out is an organizer decision, and requires a non-empty
-  /// [note] as its reason.
+  /// Unknown ISO 4217 codes are rejected before anything reaches the
+  /// repository. A [kind] of [EntryKind.payout] that is not a reversal is
+  /// always approved, because paying money out is an organizer decision, and
+  /// requires a non-empty [note] as its reason.
   Future<Entry> addEntry({
     required int amountMinor,
     required String contributorName,
     String note = '',
-    String? currency,
     EntryStatus status = EntryStatus.pending,
     String? reversesEntryId,
     EntryKind kind = EntryKind.contribution,
-  }) async {
-    final isPayout = kind == EntryKind.payout && reversesEntryId == null;
-    final trimmedNote = note.trim();
-    if (isPayout) {
-      if (trimmedNote.isEmpty) {
-        throw ArgumentError.value(note, 'note', 'a payout needs a reason');
-      }
-    }
-
-    final entry = Entry(
-      id: _uuid.v4(),
-      fundId: fundId,
+  }) {
+    return _insert(
       amountMinor: amountMinor,
-      currency: _normalizeCurrency(currency),
-      contributorName: contributorName.trim(),
-      note: trimmedNote,
-      createdAt: _clock(),
-      status: isPayout ? EntryStatus.approved : status,
+      contributorName: contributorName,
+      note: note,
+      currency: currency,
+      status: status,
       reversesEntryId: reversesEntryId,
       kind: kind,
     );
-
-    await _repository.add(entry);
-    await _reload();
-    return entry;
   }
 
   /// Approves a pending entry. Organizers only, enforced by the backend.
@@ -125,7 +106,7 @@ class LedgerController extends ChangeNotifier {
   /// Records a new approved entry that reverses [target].
   ///
   /// Reversals carry the original amount, contributor, currency, and kind, so
-  /// only that currency's figures change. The original entry is never changed.
+  /// only the fund's figures change. The original entry is never changed.
   Future<Entry> reverse({required Entry target, required String reason}) async {
     final note = reason.trim();
     if (note.isEmpty) {
@@ -144,7 +125,7 @@ class LedgerController extends ChangeNotifier {
       throw ArgumentError.value(target.id, 'target', 'is already reversed');
     }
 
-    return addEntry(
+    return _insert(
       amountMinor: target.amountMinor,
       contributorName: target.contributorName,
       note: note,
@@ -155,8 +136,41 @@ class LedgerController extends ChangeNotifier {
     );
   }
 
-  String _normalizeCurrency(String? raw) {
-    final code = (raw ?? defaultCurrency).trim().toUpperCase();
+  Future<Entry> _insert({
+    required int amountMinor,
+    required String contributorName,
+    required String note,
+    required String currency,
+    required EntryStatus status,
+    required String? reversesEntryId,
+    required EntryKind kind,
+  }) async {
+    final isPayout = kind == EntryKind.payout && reversesEntryId == null;
+    final trimmedNote = note.trim();
+    if (isPayout && trimmedNote.isEmpty) {
+      throw ArgumentError.value(note, 'note', 'a payout needs a reason');
+    }
+
+    final entry = Entry(
+      id: _uuid.v4(),
+      fundId: fundId,
+      amountMinor: amountMinor,
+      currency: _normalizeCurrency(currency),
+      contributorName: contributorName.trim(),
+      note: trimmedNote,
+      createdAt: _clock(),
+      status: isPayout ? EntryStatus.approved : status,
+      reversesEntryId: reversesEntryId,
+      kind: kind,
+    );
+
+    await _repository.add(entry);
+    await _reload();
+    return entry;
+  }
+
+  String _normalizeCurrency(String raw) {
+    final code = raw.trim().toUpperCase();
     if (CurrencyCatalog.byCode(code) == null) {
       throw ArgumentError.value(
         raw,

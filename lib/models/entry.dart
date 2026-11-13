@@ -39,7 +39,7 @@ class Entry {
   /// Always an integer; never a floating-point value.
   final int amountMinor;
 
-  /// ISO 4217 currency code, for example `USD`.
+  /// ISO 4217 currency code, always the fund's currency.
   final String currency;
 
   /// Name of the counterparty: the contributor, or the payee of a payout.

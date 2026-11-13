@@ -16,7 +16,7 @@ class Fund {
   final String id;
   final String name;
 
-  /// ISO 4217 code used for new entries in this fund.
+  /// ISO 4217 code every entry and the target are recorded in.
   final String defaultCurrency;
 
   final String createdBy;

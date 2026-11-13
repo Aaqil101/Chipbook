@@ -578,18 +578,14 @@ void main() {
     expect(find.text('Invite accepted'), findsOneWidget);
   });
 
-  testWidgets('add-entry form picks a currency and groups its total', (
-    tester,
-  ) async {
+  testWidgets('add-entry form records in the fund currency', (tester) async {
     await _pumpSignedIn(tester, funds: [_fund('fund-a', 'Trip fund')]);
 
     await tester.tap(find.text('Add entry'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('USD · US Dollar'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('UYU · Uruguayan Peso').last);
-    await tester.pumpAndSettle();
+    expect(find.text('Recorded in USD, the fund currency'), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
 
     final fields = find.byType(TextFormField);
     await tester.enterText(fields.at(0), '1500');
@@ -598,39 +594,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Pending'), findsOneWidget);
-    expect(find.text('UYU 1,500.00'), findsOneWidget);
+    expect(find.text('USD 1,500.00'), findsOneWidget);
 
     await tester.tap(find.text('Approve'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
     await tester.pumpAndSettle();
 
-    expect(find.text('UYU 1,500.00'), findsNWidgets(2));
-    expect(find.text('USD 0.00'), findsNothing);
-  });
-
-  testWidgets('totals are grouped per currency', (tester) async {
-    final entries = InMemoryEntryRepository();
-    await entries.add(
-      _entry(id: 'usd', amountMinor: 5000, status: EntryStatus.approved),
-    );
-    await entries.add(
-      _entry(
-        id: 'eur',
-        amountMinor: 3000,
-        currency: 'EUR',
-        status: EntryStatus.approved,
-      ),
-    );
-
-    await _pumpSignedIn(
-      tester,
-      funds: [_fund('fund-a', 'Trip fund')],
-      entries: entries,
-    );
-
-    expect(find.text('USD 50.00'), findsNWidgets(2));
-    expect(find.text('EUR 30.00'), findsNWidgets(2));
+    expect(find.text('USD 1,500.00'), findsNWidgets(2));
   });
 
   testWidgets('creating a fund picks its default currency', (tester) async {

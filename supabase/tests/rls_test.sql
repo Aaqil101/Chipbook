@@ -493,6 +493,23 @@ select pg_temp.assert_eq(
   'organizer can add an approved entry'
 );
 
+select pg_temp.assert_raises_message(
+  $stmt$
+    insert into public.entries (
+      id, fund_id, amount_minor, currency, contributor_name, status
+    ) values (
+      'e1212121-1212-4121-8121-121212121212',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      1000,
+      'EUR',
+      'Organizer',
+      'pending'
+    )
+  $stmt$,
+  'entry currency must match the fund currency',
+  'entries must use the fund currency'
+);
+
 reset role;
 
 select set_config(
