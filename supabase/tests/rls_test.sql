@@ -1489,6 +1489,17 @@ select pg_temp.assert_true(
   'an archived fund still shows its entries'
 );
 
+-- An archived fund cannot change its timing or target.
+select pg_temp.assert_raises_message(
+  $stmt$
+    update public.funds
+    set cadence = 'yearly'
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  $stmt$,
+  'archived funds are read-only',
+  'an archived fund cannot change its cadence'
+);
+
 select pg_temp.assert_raises(
   $stmt$
     insert into public.entries (
@@ -1561,6 +1572,83 @@ select pg_temp.assert_eq(
   ),
   1,
   'an organizer can restore a fund'
+);
+
+-- ---------------------------------------------------------------------------
+-- Cadence and period target.
+-- ---------------------------------------------------------------------------
+
+-- An organizer can set the timing and target.
+update public.funds
+set cadence = 'monthly', target_minor = 50000
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and cadence = 'monthly'
+      and target_minor = 50000
+  ),
+  1,
+  'an organizer can set the cadence and target'
+);
+
+-- A target of zero is rejected by the column check.
+select pg_temp.assert_raises(
+  $stmt$
+    update public.funds
+    set target_minor = 0
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  $stmt$,
+  '23514',
+  'a target must be positive'
+);
+
+-- A non-organizer cannot change them.
+select set_config(
+  'request.jwt.claim.sub',
+  '33333333-3333-4333-8333-333333333333',
+  true
+);
+
+update public.funds
+set cadence = 'yearly', target_minor = 99999
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and cadence = 'monthly'
+      and target_minor = 50000
+  ),
+  1,
+  'a non-organizer cannot change the cadence or target'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '22222222-2222-4222-8222-222222222222',
+  true
+);
+
+-- Clearing the target is allowed.
+update public.funds
+set target_minor = null
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and target_minor is null
+  ),
+  1,
+  'an organizer can clear the target'
 );
 
 -- A fund with no entries can be deleted outright.
@@ -1687,6 +1775,30 @@ select pg_temp.assert_eq(
   ),
   1,
   'the fund creator still becomes an organizer'
+);
+
+select pg_temp.assert_true(
+  (select cadence = 'one_off' from returning_fund),
+  'new funds are one-off by default'
+);
+select pg_temp.assert_true(
+  (select target_minor is null from returning_fund),
+  'new funds start without a target'
+);
+
+insert into public.funds (name, default_currency, cadence, target_minor)
+values ('Monthly fund', 'USD', 'monthly', 2500);
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where name = 'Monthly fund'
+      and cadence = 'monthly'
+      and target_minor = 2500
+  ),
+  1,
+  'a fund can be created with a cadence and target'
 );
 
 select 'RLS tests passed' as result;

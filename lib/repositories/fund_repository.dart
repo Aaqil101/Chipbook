@@ -1,4 +1,5 @@
 import '../models/fund.dart';
+import '../models/fund_cadence.dart';
 
 /// Funds the current user can access.
 abstract interface class FundRepository {
@@ -10,6 +11,17 @@ abstract interface class FundRepository {
   Future<Fund> createFund({
     required String name,
     required String defaultCurrency,
+    FundCadence cadence = FundCadence.oneOff,
+    int? targetMinor,
+  });
+
+  /// Changes when [fundId] repeats and its optional period target.
+  ///
+  /// Organizers only. Archived funds stay read-only.
+  Future<Fund> updateFundSettings({
+    required String fundId,
+    required FundCadence cadence,
+    int? targetMinor,
   });
 
   /// Hides [fundId] from the fund list while keeping its ledger.

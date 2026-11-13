@@ -28,6 +28,20 @@ void main() {
     });
   });
 
+  group('Money.toPlain', () {
+    test('formats without a currency code or grouping', () {
+      expect(Money.toPlain(2500), '25.00');
+      expect(Money.toPlain(123456), '1234.56');
+      expect(Money.toPlain(0), '0.00');
+      expect(Money.toPlain(-1234), '-12.34');
+    });
+
+    test('uses the currency fraction digits', () {
+      expect(Money.toPlain(2500, currency: 'JPY'), '2500');
+      expect(Money.toPlain(2500, currency: 'KWD'), '2.500');
+    });
+  });
+
   group('Money.tryParseToMinor', () {
     test('parses whole and fractional USD amounts', () {
       expect(Money.tryParseToMinor('25'), 2500);

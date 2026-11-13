@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../domain/fund_permissions.dart';
 import '../models/fund.dart';
+import '../models/fund_cadence.dart';
 import '../models/member_role.dart';
 import '../repositories/entry_repository.dart';
 import '../repositories/fund_repository.dart';
@@ -81,16 +82,46 @@ class FundController extends ChangeNotifier {
   Future<Fund> createFund({
     required String name,
     required String defaultCurrency,
+    FundCadence cadence = FundCadence.oneOff,
+    int? targetMinor,
   }) async {
     final fund = await _fundRepository.createFund(
       name: name,
       defaultCurrency: defaultCurrency,
+      cadence: cadence,
+      targetMinor: targetMinor,
     );
 
     _funds = [..._funds, fund];
     await _activate(fund);
     notifyListeners();
     return fund;
+  }
+
+  /// Changes when [fund] repeats and its optional period target.
+  ///
+  /// Entries never change, so the active ledger is left as it is; only the
+  /// fund's settings are replaced.
+  Future<Fund> updateFundSettings(
+    Fund fund, {
+    required FundCadence cadence,
+    int? targetMinor,
+  }) async {
+    final updated = await _fundRepository.updateFundSettings(
+      fundId: fund.id,
+      cadence: cadence,
+      targetMinor: targetMinor,
+    );
+
+    _funds = [
+      for (final current in _funds)
+        if (current.id == updated.id) updated else current,
+    ];
+    if (_activeFund?.id == updated.id) {
+      _activeFund = updated;
+    }
+    notifyListeners();
+    return updated;
   }
 
   /// Switches the active fund, its role, and its entries.

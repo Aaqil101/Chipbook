@@ -1,21 +1,24 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Actions an organizer can take on the active fund.
-enum FundSettingsAction { archive, delete }
+import '../domain/money.dart';
+import '../models/fund.dart';
 
-/// Bottom sheet listing the destructive fund actions.
+/// Actions an organizer can take on the active fund.
+enum FundSettingsAction { timing, archive, delete }
+
+/// Bottom sheet listing the fund's settings and destructive actions.
 ///
 /// Deleting is only offered while the fund has no entries; otherwise the
 /// ledger would be lost, so archiving is the only option.
 class FundSettingsSheet extends StatelessWidget {
   const FundSettingsSheet({
     super.key,
-    required this.fundName,
+    required this.fund,
     required this.canDelete,
     required this.onRestoreArchived,
   });
 
-  final String fundName;
+  final Fund fund;
   final bool canDelete;
 
   /// Opens the list of archived funds, or null when there are none.
@@ -33,8 +36,14 @@ class FundSettingsSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(fundName, style: theme.textTheme.titleLarge),
+              child: Text(fund.name, style: theme.textTheme.titleLarge),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.event_repeat),
+            title: const Text('Timing and target'),
+            subtitle: Text(_timingSummary(fund)),
+            onTap: () => Navigator.of(context).pop(FundSettingsAction.timing),
           ),
           ListTile(
             leading: const Icon(Icons.archive_outlined),
@@ -70,6 +79,14 @@ class FundSettingsSheet extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _timingSummary(Fund fund) {
+    final target = fund.targetMinor;
+    final goal = target == null
+        ? 'no target'
+        : '${Money.format(target, currency: fund.defaultCurrency)} target';
+    return '${fund.cadence.label} · $goal';
   }
 }
 

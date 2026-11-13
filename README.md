@@ -12,6 +12,7 @@ Phase 2 is implemented on a hosted Supabase backend:
 - Multiple funds, with the creator becoming the first organizer
 - Organizer approvals and reversals with a required reason
 - Organizer payouts for money leaving the fund
+- One-off, weekly, monthly, or yearly fund timing with an optional period target
 - Member management with expiring invite codes
 - Per-currency raised, paid-out, and balance totals
 
@@ -39,6 +40,14 @@ paying a supplier at the end of a collection; the organizer must give a payee
 and a reason, and a payout is approved as soon as it is recorded. Totals show
 raised, paid out, and the remaining balance per currency. Chipbook only keeps
 the record; it never moves the money.
+
+A fund can be a one-off collection or repeat weekly, monthly, or yearly. An
+organizer can set an optional target in the fund's default currency, and the
+ledger shows progress for the current calendar period above the lifetime
+totals. Weeks start on Monday, months on the 1st, and years on 1 January, using
+the device's local time. Changing the timing never edits entries: the figures
+are derived from the ledger, and a reversal corrects the period of the entry it
+reverses.
 
 A fund is never destroyed while it has a ledger. An organizer can archive it:
 it disappears from the fund list, its entries stay readable, and it can be
@@ -115,6 +124,7 @@ flutter run -d chrome --dart-define-from-file=.env
 ## Using it
 
 1. Sign in with a magic link and create a fund. You become its first organizer.
+   Pick a one-off, weekly, monthly, or yearly cadence and an optional target.
 2. Add entries with a currency; new entries start pending.
 3. Organizers approve pending entries. Approved entries count toward the
    balance for that currency only.
@@ -125,9 +135,9 @@ flutter run -d chrome --dart-define-from-file=.env
    The invitee signs in with that email and uses **Redeem an invite**.
 6. To correct an approved entry, use **Reverse** and give a reason. The
    original stays visible and the reversal reduces the same currency's balance.
-7. Use **Fund settings** in the fund menu to archive the active fund, or to
-   delete it when it has no entries. Archived funds are listed on the
-   no-funds page, where they can be restored.
+7. Use **Fund settings** in the fund menu to change the **Timing and target**,
+   archive the active fund, or delete it when it has no entries. Archived funds
+   are listed on the no-funds page, where they can be restored.
 
 ## Test it
 
@@ -145,9 +155,9 @@ npx supabase db query --remote --yes --file supabase/tests/rls_test.sql
 ```
 
 A successful run ends with `{"result":"RLS tests passed"}`. The suite covers
-selects, inserts, approvals, reversals, invites, fund archival and deletion,
-and the last-organizer guard for every role. `supabase test db` is not used
-because it requires Docker.
+selects, inserts, approvals, reversals, invites, fund cadence and targets, fund
+archival and deletion, and the last-organizer guard for every role. `supabase
+test db` is not used because it requires Docker.
 
 ## Deploy
 
@@ -193,8 +203,9 @@ Only the publishable key belongs in a client build. Never add a
 
 - `lib/models/` — `Entry`, `Fund`, `Membership`, `Invite`, `MemberRole`; money
   is always an integer `amountMinor`.
-- `lib/domain/` — approved-entry totals, payouts, and reversals, per-currency
-  grouping, currency catalog, money parsing/formatting, and validation.
+- `lib/domain/` — approved-entry totals, payouts, and reversals, cadence
+  periods, per-currency grouping, currency catalog, money parsing/formatting,
+  and validation.
 - `lib/repositories/` — interfaces for entries, funds, memberships, and
   invites, plus Supabase implementations. Tests use the in-memory entry store.
 - `lib/state/` — `ChangeNotifier` controllers for auth, funds, and the active

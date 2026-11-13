@@ -8,6 +8,7 @@ import 'package:chipbook/auth/auth_service.dart';
 import 'package:chipbook/main.dart';
 import 'package:chipbook/models/entry.dart';
 import 'package:chipbook/models/fund.dart';
+import 'package:chipbook/models/fund_cadence.dart';
 import 'package:chipbook/models/invite.dart';
 import 'package:chipbook/models/member_role.dart';
 import 'package:chipbook/models/membership.dart';
@@ -820,6 +821,54 @@ void main() {
 
     expect(find.text('Fund settings'), findsNothing);
   });
+
+  testWidgets('creating a monthly fund stores its cadence and target', (
+    tester,
+  ) async {
+    final fundRepository = FakeFundRepository();
+    await _pumpSignedIn(tester, fundRepository: fundRepository);
+
+    await tester.tap(find.text('Create a fund'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Class fees');
+    await _chooseCadence(tester, 'Monthly');
+    await tester.enterText(find.byType(TextFormField).at(1), '500');
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    final fund = fundRepository.funds.single;
+    expect(fund.cadence, FundCadence.monthly);
+    expect(fund.targetMinor, 50000);
+    expect(find.text('This month'), findsOneWidget);
+    expect(find.text('of USD 500.00 · 0% of target'), findsOneWidget);
+  });
+
+  testWidgets('organizers change the timing and target from fund settings', (
+    tester,
+  ) async {
+    final fundRepository = FakeFundRepository(
+      funds: [_fund('fund-a', 'Class fees')],
+    );
+    await _pumpSignedIn(tester, fundRepository: fundRepository);
+
+    await _openFundSettings(tester);
+    expect(find.text('One-off · no target'), findsOneWidget);
+
+    await tester.tap(find.text('Timing and target'));
+    await tester.pumpAndSettle();
+
+    await _chooseCadence(tester, 'Monthly');
+    await tester.enterText(find.byType(TextFormField), '500');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    final fund = fundRepository.funds.single;
+    expect(fund.cadence, FundCadence.monthly);
+    expect(fund.targetMinor, 50000);
+    expect(find.text('This month'), findsOneWidget);
+    expect(find.text('of USD 500.00 · 0% of target'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpSignedIn(
@@ -860,13 +909,27 @@ Future<void> _openFundSettings(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Fund _fund(String id, String name) {
+Future<void> _chooseCadence(WidgetTester tester, String label) async {
+  await tester.tap(find.byType(DropdownButtonFormField<FundCadence>));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label).last);
+  await tester.pumpAndSettle();
+}
+
+Fund _fund(
+  String id,
+  String name, {
+  FundCadence cadence = FundCadence.oneOff,
+  int? targetMinor,
+}) {
   return Fund(
     id: id,
     name: name,
     defaultCurrency: 'USD',
     createdBy: 'user-1',
     createdAt: DateTime(2026, 1, 1),
+    cadence: cadence,
+    targetMinor: targetMinor,
   );
 }
 
@@ -955,6 +1018,8 @@ class FakeFundRepository implements FundRepository {
   Future<Fund> createFund({
     required String name,
     required String defaultCurrency,
+    FundCadence cadence = FundCadence.oneOff,
+    int? targetMinor,
   }) async {
     final fund = Fund(
       id: 'created-${_nextId++}',
@@ -962,9 +1027,29 @@ class FakeFundRepository implements FundRepository {
       defaultCurrency: defaultCurrency,
       createdBy: 'user-1',
       createdAt: DateTime(2026, 1, 1),
+      cadence: cadence,
+      targetMinor: targetMinor,
     );
     _funds.add(fund);
     return fund;
+  }
+
+  @override
+  Future<Fund> updateFundSettings({
+    required String fundId,
+    required FundCadence cadence,
+    int? targetMinor,
+  }) async {
+    final index = _funds.indexWhere((fund) => fund.id == fundId);
+    if (index == -1) {
+      throw StateError('no such fund');
+    }
+    final updated = _funds[index].withSettings(
+      cadence: cadence,
+      targetMinor: targetMinor,
+    );
+    _funds[index] = updated;
+    return updated;
   }
 
   @override
@@ -994,6 +1079,8 @@ class FakeFundRepository implements FundRepository {
       defaultCurrency: current.defaultCurrency,
       createdBy: current.createdBy,
       createdAt: current.createdAt,
+      cadence: current.cadence,
+      targetMinor: current.targetMinor,
       archivedAt: archivedAt,
     );
   }

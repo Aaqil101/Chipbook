@@ -7,6 +7,7 @@ import '../models/entry.dart';
 import '../models/fund.dart';
 import '../state/ledger_controller.dart';
 import 'add_entry_page.dart';
+import 'period_progress_card.dart';
 import 'reverse_entry_dialog.dart';
 
 const _newFundAction = '__new_fund__';
@@ -18,7 +19,7 @@ class EntriesPage extends StatelessWidget {
   const EntriesPage({
     super.key,
     required this.controller,
-    required this.fundName,
+    required this.fund,
     this.permissions,
     this.funds = const <Fund>[],
     this.onSelectFund,
@@ -30,7 +31,7 @@ class EntriesPage extends StatelessWidget {
   });
 
   final LedgerController controller;
-  final String fundName;
+  final Fund fund;
 
   /// The signed-in user's role in this fund, or null until it is known.
   final FundPermissions? permissions;
@@ -55,7 +56,7 @@ class EntriesPage extends StatelessWidget {
         final summary = controller.summary;
         return Scaffold(
           appBar: AppBar(
-            title: Text(fundName, overflow: TextOverflow.ellipsis),
+            title: Text(fund.name, overflow: TextOverflow.ellipsis),
             actions: [
               if (onOpenMembers != null)
                 IconButton(
@@ -135,11 +136,24 @@ class EntriesPage extends StatelessWidget {
     if (controller.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final progress = PeriodProgressCard.shouldShow(fund)
+        ? PeriodProgressCard(fund: fund, entries: controller.entries)
+        : null;
+
     if (summary.isEmpty) {
-      return const _EmptyState();
+      if (progress == null) {
+        return const _EmptyState();
+      }
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        children: [progress, const SizedBox(height: 24), const _EmptyState()],
+      );
     }
+
     return _LedgerList(
       summary: summary,
+      progress: progress,
       permissions: permissions,
       onApprove: (entry) => _approve(context, entry),
       onReverse: (entry) => _reverse(context, entry),
@@ -246,6 +260,7 @@ class EntriesPage extends StatelessWidget {
 class _LedgerList extends StatelessWidget {
   const _LedgerList({
     required this.summary,
+    required this.progress,
     required this.permissions,
     required this.onApprove,
     required this.onReverse,
@@ -253,6 +268,10 @@ class _LedgerList extends StatelessWidget {
   });
 
   final LedgerSummary summary;
+
+  /// Period progress shown above the balance, or null for a plain fund.
+  final Widget? progress;
+
   final FundPermissions? permissions;
   final ValueChanged<Entry> onApprove;
   final ValueChanged<Entry> onReverse;
@@ -268,6 +287,7 @@ class _LedgerList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: [
+        if (progress != null) ...[progress!, const SizedBox(height: 16)],
         _TotalCard(summary: summary),
         const SizedBox(height: 24),
         if (summary.pending.isNotEmpty) ...[

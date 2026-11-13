@@ -29,6 +29,25 @@ abstract final class Money {
     return '$sign$currency $whole.$fraction';
   }
 
+  /// Formats [amountMinor] as a decimal string without the currency code,
+  /// suitable for pre-filling an amount field, for example `25.00`.
+  static String toPlain(
+    int amountMinor, {
+    String currency = AppConfig.defaultCurrency,
+  }) {
+    final decimals = CurrencyCatalog.fractionDigitsFor(currency);
+    final factor = _factor(decimals);
+    final sign = amountMinor < 0 ? '-' : '';
+    final absolute = amountMinor.abs();
+
+    if (decimals == 0) {
+      return '$sign${absolute ~/ factor}';
+    }
+
+    final fraction = (absolute % factor).toString().padLeft(decimals, '0');
+    return '$sign${absolute ~/ factor}.$fraction';
+  }
+
   /// Parses a decimal string such as `25.00` into integer minor units.
   ///
   /// Returns null for empty input, negatives, separators other than `.`,

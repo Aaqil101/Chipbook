@@ -3,11 +3,18 @@ import 'package:material_ui/material_ui.dart';
 import '../config.dart';
 import '../domain/currency.dart';
 import '../domain/fund_validation.dart';
+import '../domain/money.dart';
+import '../models/fund_cadence.dart';
 
 /// Values collected by [CreateFundDialog].
-typedef FundDraft = ({String name, String currency});
+typedef FundDraft = ({
+  String name,
+  String currency,
+  FundCadence cadence,
+  int? targetMinor,
+});
 
-/// Asks for a fund name and its default currency.
+/// Asks for a fund name, its default currency, its timing, and a target.
 class CreateFundDialog extends StatefulWidget {
   const CreateFundDialog({super.key});
 
@@ -18,7 +25,9 @@ class CreateFundDialog extends StatefulWidget {
 class _CreateFundDialogState extends State<CreateFundDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _targetController = TextEditingController();
   late String _currency;
+  FundCadence _cadence = FundCadence.oneOff;
 
   @override
   void initState() {
@@ -31,6 +40,7 @@ class _CreateFundDialogState extends State<CreateFundDialog> {
   @override
   void dispose() {
     _nameController.dispose();
+    _targetController.dispose();
     super.dispose();
   }
 
@@ -39,54 +49,100 @@ class _CreateFundDialogState extends State<CreateFundDialog> {
       return;
     }
 
-    Navigator.of(
-      context,
-    ).pop<FundDraft>((name: _nameController.text.trim(), currency: _currency));
+    final target = _targetController.text.trim();
+    Navigator.of(context).pop<FundDraft>((
+      name: _nameController.text.trim(),
+      currency: _currency,
+      cadence: _cadence,
+      targetMinor: target.isEmpty
+          ? null
+          : Money.tryParseToMinor(target, currency: _currency),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Create a fund'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(labelText: 'Fund name'),
-              validator: (value) => FundValidation.nameError(value ?? ''),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _currency,
-              isExpanded: true,
-              menuMaxHeight: 420,
-              decoration: const InputDecoration(
-                labelText: 'Default currency',
-                helperText: 'New entries start in this currency',
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Fund name'),
+                validator: (value) => FundValidation.nameError(value ?? ''),
               ),
-              items: [
-                for (final currency in CurrencyCatalog.currencies)
-                  DropdownMenuItem<String>(
-                    value: currency.code,
-                    child: Text(
-                      currency.label,
-                      overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _currency,
+                isExpanded: true,
+                menuMaxHeight: 420,
+                decoration: const InputDecoration(
+                  labelText: 'Default currency',
+                  helperText: 'New entries start in this currency',
+                ),
+                items: [
+                  for (final currency in CurrencyCatalog.currencies)
+                    DropdownMenuItem<String>(
+                      value: currency.code,
+                      child: Text(
+                        currency.label,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-              ],
-              onChanged: (code) {
-                if (code != null) {
-                  setState(() => _currency = code);
-                }
-              },
-            ),
-          ],
+                ],
+                onChanged: (code) {
+                  if (code != null) {
+                    setState(() => _currency = code);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<FundCadence>(
+                initialValue: _cadence,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Collection timing',
+                  helperText: _cadence.rollover,
+                ),
+                items: [
+                  for (final cadence in FundCadence.values)
+                    DropdownMenuItem<FundCadence>(
+                      value: cadence,
+                      child: Text(cadence.label),
+                    ),
+                ],
+                onChanged: (cadence) {
+                  if (cadence != null) {
+                    setState(() => _cadence = cadence);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _targetController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  labelText: 'Target in $_currency (optional)',
+                  helperText: _cadence.targetScope,
+                ),
+                validator: (value) => FundValidation.targetError(
+                  value ?? '',
+                  currency: _currency,
+                ),
+                onFieldSubmitted: (_) => _submit(),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

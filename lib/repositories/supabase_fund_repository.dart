@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/fund.dart';
+import '../models/fund_cadence.dart';
 import 'fund_repository.dart';
 import 'repository_exception.dart';
 import 'supabase_errors.dart';
@@ -28,16 +29,42 @@ class SupabaseFundRepository implements FundRepository {
   Future<Fund> createFund({
     required String name,
     required String defaultCurrency,
+    FundCadence cadence = FundCadence.oneOff,
+    int? targetMinor,
   }) async {
     try {
       final row = await _client
           .from('funds')
-          .insert({'name': name.trim(), 'default_currency': defaultCurrency})
+          .insert({
+            'name': name.trim(),
+            'default_currency': defaultCurrency,
+            'cadence': cadence.code,
+            'target_minor': targetMinor,
+          })
           .select()
           .single();
       return _fundFromRow(row);
     } on Object catch (error) {
       throw supabaseFailure('Could not create the fund', error);
+    }
+  }
+
+  @override
+  Future<Fund> updateFundSettings({
+    required String fundId,
+    required FundCadence cadence,
+    int? targetMinor,
+  }) async {
+    try {
+      final row = await _client
+          .from('funds')
+          .update({'cadence': cadence.code, 'target_minor': targetMinor})
+          .eq('id', fundId)
+          .select()
+          .single();
+      return _fundFromRow(row);
+    } on Object catch (error) {
+      throw supabaseFailure('Could not update the fund', error);
     }
   }
 
@@ -87,12 +114,18 @@ class SupabaseFundRepository implements FundRepository {
 
   Fund _fundFromRow(Map<String, dynamic> row) {
     final archivedAt = row['archived_at'] as String?;
+    final cadence = row['cadence'] as String?;
+    final targetMinor = row['target_minor'];
     return Fund(
       id: row['id'] as String,
       name: row['name'] as String,
       defaultCurrency: (row['default_currency'] as String).trim(),
       createdBy: row['created_by'] as String,
       createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
+      cadence: cadence == null
+          ? FundCadence.oneOff
+          : FundCadence.fromCode(cadence),
+      targetMinor: targetMinor == null ? null : (targetMinor as num).toInt(),
       archivedAt: archivedAt == null
           ? null
           : DateTime.parse(archivedAt).toLocal(),

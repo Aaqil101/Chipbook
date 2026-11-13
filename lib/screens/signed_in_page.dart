@@ -11,6 +11,7 @@ import '../repositories/invite_repository.dart';
 import '../repositories/membership_repository.dart';
 import '../state/fund_controller.dart';
 import 'create_fund_dialog.dart';
+import 'edit_fund_settings_dialog.dart';
 import 'entries_page.dart';
 import 'fund_settings_sheet.dart';
 import 'members_page.dart';
@@ -92,7 +93,7 @@ class _SignedInPageState extends State<SignedInPage> {
         final permissions = _funds.permissions;
         return EntriesPage(
           controller: ledger,
-          fundName: fund.name,
+          fund: fund,
           permissions: permissions,
           funds: _funds.funds,
           onSelectFund: (fund) => unawaited(_selectFund(fund)),
@@ -123,6 +124,8 @@ class _SignedInPageState extends State<SignedInPage> {
       await _funds.createFund(
         name: draft.name,
         defaultCurrency: draft.currency,
+        cadence: draft.cadence,
+        targetMinor: draft.targetMinor,
       );
     } on Object catch (error) {
       if (!mounted) {
@@ -156,7 +159,7 @@ class _SignedInPageState extends State<SignedInPage> {
     final action = await showModalBottomSheet<FundSettingsAction>(
       context: context,
       builder: (_) => FundSettingsSheet(
-        fundName: fund.name,
+        fund: fund,
         canDelete:
             ledger != null && !ledger.isLoading && ledger.summary.isEmpty,
         onRestoreArchived: _funds.archivedFunds.isEmpty
@@ -169,6 +172,8 @@ class _SignedInPageState extends State<SignedInPage> {
     }
 
     switch (action) {
+      case FundSettingsAction.timing:
+        await _editFundSettings(fund);
       case FundSettingsAction.archive:
         if (!await confirmArchiveFund(context, fund.name) || !mounted) {
           return;
@@ -186,6 +191,30 @@ class _SignedInPageState extends State<SignedInPage> {
           () => _funds.deleteFund(fund),
           success: '“${fund.name}” deleted',
         );
+    }
+  }
+
+  Future<void> _editFundSettings(Fund fund) async {
+    final draft = await showDialog<FundSettingsDraft>(
+      context: context,
+      builder: (_) => EditFundSettingsDialog(fund: fund),
+    );
+    if (draft == null || !mounted) {
+      return;
+    }
+
+    try {
+      await _funds.updateFundSettings(
+        fund,
+        cadence: draft.cadence,
+        targetMinor: draft.targetMinor,
+      );
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
