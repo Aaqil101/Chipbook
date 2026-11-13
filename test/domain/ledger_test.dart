@@ -18,7 +18,7 @@ void main() {
       final summary = LedgerSummary.from(const [], defaultCurrency: 'USD');
 
       expect(summary.totals, hasLength(1));
-      expect(summary.totalMinorFor('USD'), 0);
+      expect(summary.balanceMinorFor('USD'), 0);
     });
 
     test('sums approved entries only', () {
@@ -28,7 +28,7 @@ void main() {
         _entry(id: 'c', amountMinor: 9000, status: EntryStatus.pending),
       ]);
 
-      expect(summary.totalMinorFor('USD'), 3500);
+      expect(summary.balanceMinorFor('USD'), 3500);
       expect(summary.approved, hasLength(2));
       expect(summary.pending, hasLength(1));
       expect(summary.pending.single.id, 'c');
@@ -48,9 +48,9 @@ void main() {
       ]);
 
       expect(summary.totals, hasLength(2));
-      expect(summary.totalMinorFor('USD'), 1500);
-      expect(summary.totalMinorFor('EUR'), 2000);
-      expect(summary.totalMinorFor('JPY'), 0);
+      expect(summary.balanceMinorFor('USD'), 1500);
+      expect(summary.balanceMinorFor('EUR'), 2000);
+      expect(summary.balanceMinorFor('JPY'), 0);
       expect(summary.totals.map((total) => total.currency), ['EUR', 'USD']);
     });
 
@@ -61,8 +61,8 @@ void main() {
         _entry(id: 'r', amountMinor: 5000, reversesEntryId: 'usd'),
       ]);
 
-      expect(summary.totalMinorFor('USD'), 0);
-      expect(summary.totalMinorFor('EUR'), 3000);
+      expect(summary.balanceMinorFor('USD'), 0);
+      expect(summary.balanceMinorFor('EUR'), 3000);
       expect(summary.approved, hasLength(3));
     });
 
@@ -77,8 +77,8 @@ void main() {
         ),
       ]);
 
-      expect(summary.totalMinorFor('USD'), 5000);
-      expect(summary.totalMinorFor('EUR'), 0);
+      expect(summary.balanceMinorFor('USD'), 5000);
+      expect(summary.balanceMinorFor('EUR'), 0);
     });
 
     test('a partial reversal subtracts only its own amount', () {
@@ -87,7 +87,7 @@ void main() {
         _entry(id: 'r', amountMinor: 2000, reversesEntryId: 'a'),
       ]);
 
-      expect(summary.totalMinorFor('USD'), 3000);
+      expect(summary.balanceMinorFor('USD'), 3000);
     });
 
     test('reversing a pending entry does not change the total', () {
@@ -112,7 +112,75 @@ void main() {
         ),
       ]);
 
-      expect(summary.totalMinorFor('USD'), 5000);
+      expect(summary.balanceMinorFor('USD'), 5000);
+    });
+
+    test('a payout lowers the balance but not the raised figure', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'contribution', amountMinor: 10000),
+        _entry(id: 'payout', amountMinor: 4000, kind: EntryKind.payout),
+      ]);
+
+      expect(summary.raisedMinorFor('USD'), 10000);
+      expect(summary.paidOutMinorFor('USD'), 4000);
+      expect(summary.balanceMinorFor('USD'), 6000);
+    });
+
+    test('reversing a payout restores the balance', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'contribution', amountMinor: 10000),
+        _entry(id: 'payout', amountMinor: 4000, kind: EntryKind.payout),
+        _entry(
+          id: 'refund',
+          amountMinor: 4000,
+          kind: EntryKind.payout,
+          reversesEntryId: 'payout',
+        ),
+      ]);
+
+      expect(summary.raisedMinorFor('USD'), 10000);
+      expect(summary.paidOutMinorFor('USD'), 0);
+      expect(summary.balanceMinorFor('USD'), 10000);
+    });
+
+    test('payouts are grouped per currency', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'usd-in', amountMinor: 10000),
+        _entry(id: 'usd-out', amountMinor: 4000, kind: EntryKind.payout),
+        _entry(id: 'eur-in', amountMinor: 5000, currency: 'EUR'),
+        _entry(
+          id: 'eur-out',
+          amountMinor: 1000,
+          currency: 'EUR',
+          kind: EntryKind.payout,
+        ),
+      ]);
+
+      expect(summary.raisedMinorFor('USD'), 10000);
+      expect(summary.balanceMinorFor('USD'), 6000);
+      expect(summary.raisedMinorFor('EUR'), 5000);
+      expect(summary.balanceMinorFor('EUR'), 4000);
+      expect(summary.totals.map((total) => total.currency), ['EUR', 'USD']);
+    });
+
+    test('a payout can be reversed', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'payout', amountMinor: 4000, kind: EntryKind.payout),
+      ]);
+
+      expect(summary.canReverse(summary.approved.single), isTrue);
+      expect(summary.balanceMinorFor('USD'), -4000);
+    });
+
+    test('a reversal with a different kind is ignored', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'contribution', amountMinor: 10000),
+        _entry(id: 'payout', amountMinor: 4000, kind: EntryKind.payout),
+        _entry(id: 'wrong', amountMinor: 4000, reversesEntryId: 'payout'),
+      ]);
+
+      expect(summary.raisedMinorFor('USD'), 10000);
+      expect(summary.balanceMinorFor('USD'), 6000);
     });
 
     test('tracks which entries already have a reversal', () {
@@ -158,7 +226,7 @@ void main() {
       );
       expect(
         () => summary.totals.add(
-          const CurrencyTotal(currency: 'EUR', totalMinor: 0),
+          const CurrencyTotal(currency: 'EUR', raisedMinor: 0, balanceMinor: 0),
         ),
         throwsUnsupportedError,
       );
@@ -176,6 +244,7 @@ Entry _entry({
   String currency = 'USD',
   EntryStatus status = EntryStatus.approved,
   String? reversesEntryId,
+  EntryKind kind = EntryKind.contribution,
   DateTime? createdAt,
 }) {
   return Entry(
@@ -187,5 +256,6 @@ Entry _entry({
     createdAt: createdAt ?? DateTime(2026, 1, 1),
     status: status,
     reversesEntryId: reversesEntryId,
+    kind: kind,
   );
 }

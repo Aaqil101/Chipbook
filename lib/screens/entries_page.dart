@@ -182,9 +182,13 @@ class EntriesPage extends StatelessWidget {
   }
 
   Future<void> _openAddEntry(BuildContext context) {
+    final permissions = this.permissions;
     return Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => AddEntryPage(controller: controller),
+        builder: (_) => AddEntryPage(
+          controller: controller,
+          canRecordPayout: permissions?.canRecordPayout ?? false,
+        ),
       ),
     );
   }
@@ -287,7 +291,7 @@ class _TotalCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Raised so far',
+              'Balance',
               style: theme.textTheme.titleMedium?.copyWith(color: foreground),
             ),
             const SizedBox(height: 8),
@@ -299,13 +303,30 @@ class _TotalCard extends StatelessWidget {
             else
               for (final total in summary.totals)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    Money.format(total.totalMinor, currency: total.currency),
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        Money.format(
+                          total.balanceMinor,
+                          currency: total.currency,
+                        ),
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${Money.format(total.raisedMinor, currency: total.currency)} '
+                        'raised · '
+                        '${Money.format(total.paidOutMinor, currency: total.currency)} '
+                        'paid out',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: foreground,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             const SizedBox(height: 4),
@@ -390,7 +411,9 @@ class _EntryTile extends StatelessWidget {
                     currency: entry.currency,
                   ),
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: entry.isReversal ? theme.colorScheme.error : null,
+                    color: entry.signedAmountMinor < 0
+                        ? theme.colorScheme.error
+                        : null,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -398,12 +421,21 @@ class _EntryTile extends StatelessWidget {
                   Text(
                     'Reversal',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.error,
+                      color: entry.signedAmountMinor < 0
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.onSurfaceVariant,
                     ),
                   )
                 else if (isReversed)
                   Text(
                     'Reversed',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                else if (entry.isPayout)
+                  Text(
+                    'Payout',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

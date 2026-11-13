@@ -19,4 +19,24 @@ void main() {
       expect(EntryValidation.reversalReasonError('Recorded twice'), isNull);
     });
   });
+
+  group('payout validation', () {
+    test('requires a payee', () {
+      expect(EntryValidation.payeeError(''), 'Enter who was paid');
+      expect(EntryValidation.payeeError('   '), 'Enter who was paid');
+      expect(EntryValidation.payeeError('Teacher'), isNull);
+    });
+
+    test('requires a reason', () {
+      expect(
+        EntryValidation.payoutReasonError(''),
+        'Enter a reason for the payout',
+      );
+      expect(
+        EntryValidation.payoutReasonError('   '),
+        'Enter a reason for the payout',
+      );
+      expect(EntryValidation.payoutReasonError('Monthly class fee'), isNull);
+    });
+  });
 }

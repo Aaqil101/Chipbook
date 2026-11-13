@@ -18,6 +18,9 @@ class FundPermissions {
 
   bool get canApprove => role == MemberRole.organizer;
 
+  /// Records money leaving the fund as a payout entry.
+  bool get canRecordPayout => role == MemberRole.organizer;
+
   bool get canReverse => role == MemberRole.organizer;
 
   bool get canManageMembers => role == MemberRole.organizer;

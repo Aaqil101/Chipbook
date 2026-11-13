@@ -11,8 +11,9 @@ Phase 2 is implemented on a hosted Supabase backend:
 - Magic-link email sign-in and a session gate
 - Multiple funds, with the creator becoming the first organizer
 - Organizer approvals and reversals with a required reason
+- Organizer payouts for money leaving the fund
 - Member management with expiring invite codes
-- Per-currency totals for all ISO 4217 fiat currencies
+- Per-currency raised, paid-out, and balance totals
 
 The app is web-first. There are deliberately no `android/` or `ios/`
 directories, and there is no payment, wallet, or custody functionality.
@@ -24,13 +25,19 @@ any credentials; follow the setup below to connect your own.
 
 | Role      | Can do                                                        |
 | --------- | ------------------------------------------------------------- |
-| Organizer | Invite, approve, reverse, change roles, remove members, archive or delete a fund |
+| Organizer | Invite, approve, record payouts, reverse, change roles, remove members, archive or delete a fund |
 | Member    | Add entries (pending until approved) and view the ledger      |
 | Observer  | View the ledger only                                          |
 
 Entries are append-only: nobody can edit or delete one. A correction is a new
 entry that reverses the original, and the original stays visible. Only
 approved entries count toward a total.
+
+A contribution adds to the fund. A payout records money leaving it, such as
+paying a supplier at the end of a collection; the organizer must give a payee
+and a reason, and a payout is approved as soon as it is recorded. Totals show
+raised, paid out, and the remaining balance per currency. Chipbook only keeps
+the record; it never moves the money.
 
 A fund is never destroyed while it has a ledger. An organizer can archive it:
 it disappears from the fund list, its entries stay readable, and it can be
@@ -109,12 +116,15 @@ flutter run -d chrome --dart-define-from-file=.env
 1. Sign in with a magic link and create a fund. You become its first organizer.
 2. Add entries with a currency; new entries start pending.
 3. Organizers approve pending entries. Approved entries count toward the
-   total for that currency only.
-4. Open **Members** to invite an email with a role, then copy the invite code.
+   balance for that currency only.
+4. Organizers can record a **Payout** from the add-entry form. It needs a
+   payee and a reason, is approved immediately, and reduces the balance. A
+   payout larger than the balance warns but is still recorded.
+5. Open **Members** to invite an email with a role, then copy the invite code.
    The invitee signs in with that email and uses **Redeem an invite**.
-5. To correct an approved entry, use **Reverse** and give a reason. The
-   original stays visible and the reversal reduces the same currency's total.
-6. Use **Fund settings** in the fund menu to archive the active fund, or to
+6. To correct an approved entry, use **Reverse** and give a reason. The
+   original stays visible and the reversal reduces the same currency's balance.
+7. Use **Fund settings** in the fund menu to archive the active fund, or to
    delete it when it has no entries. Archived funds are listed on the
    no-funds page, where they can be restored.
 
@@ -182,8 +192,8 @@ Only the publishable key belongs in a client build. Never add a
 
 - `lib/models/` — `Entry`, `Fund`, `Membership`, `Invite`, `MemberRole`; money
   is always an integer `amountMinor`.
-- `lib/domain/` — append-only totals and reversals, per-currency grouping,
-  currency catalog, money parsing/formatting, and validation.
+- `lib/domain/` — append-only totals, payouts, and reversals, per-currency
+  grouping, currency catalog, money parsing/formatting, and validation.
 - `lib/repositories/` — interfaces for entries, funds, memberships, and
   invites, plus Supabase implementations. Tests use the in-memory entry store.
 - `lib/state/` — `ChangeNotifier` controllers for auth, funds, and the active

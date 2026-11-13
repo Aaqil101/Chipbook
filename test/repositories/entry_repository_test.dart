@@ -80,6 +80,20 @@ void main() {
     expect(reversal.signedAmountMinor, -5000);
   });
 
+  test('stores payouts alongside contributions', () async {
+    await repository.add(_entry('in', amountMinor: 5000));
+    await repository.add(
+      _entry('out', amountMinor: 2000, kind: EntryKind.payout),
+    );
+
+    final entries = await repository.getAll(fundId: _fundId);
+    final payout = entries.firstWhere((entry) => entry.id == 'out');
+
+    expect(payout.kind, EntryKind.payout);
+    expect(payout.isPayout, isTrue);
+    expect(payout.signedAmountMinor, -2000);
+  });
+
   test('approves a pending entry', () async {
     await repository.add(_entry('a', status: EntryStatus.pending));
 
@@ -128,6 +142,7 @@ Entry _entry(
   int amountMinor = 1000,
   EntryStatus status = EntryStatus.approved,
   String? reversesEntryId,
+  EntryKind kind = EntryKind.contribution,
 }) {
   return Entry(
     id: id,
@@ -138,5 +153,6 @@ Entry _entry(
     createdAt: DateTime(2026, 1, 1),
     status: status,
     reversesEntryId: reversesEntryId,
+    kind: kind,
   );
 }

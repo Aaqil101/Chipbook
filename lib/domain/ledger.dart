@@ -1,11 +1,26 @@
 import '../models/entry.dart';
 
-/// Approved total for a single currency.
+/// Approved figures for a single currency.
+///
+/// [raisedMinor] counts contributions only, while [balanceMinor] is what is
+/// left after payouts. Amounts in different currencies are never combined.
 class CurrencyTotal {
-  const CurrencyTotal({required this.currency, required this.totalMinor});
+  const CurrencyTotal({
+    required this.currency,
+    required this.raisedMinor,
+    required this.balanceMinor,
+  });
 
   final String currency;
-  final int totalMinor;
+
+  /// Contributions net of their reversals.
+  final int raisedMinor;
+
+  /// Contributions minus payouts, both net of their reversals.
+  final int balanceMinor;
+
+  /// Money paid out of the fund so far.
+  int get paidOutMinor => raisedMinor - balanceMinor;
 }
 
 /// Aggregated view of a set of ledger entries.
@@ -25,7 +40,9 @@ class LedgerSummary {
   /// Only approved entries count toward a total. An approved reversal
   /// subtracts from its own currency only when the entry it reverses is also
   /// approved and uses the same currency, so reversing a pending entry or
-  /// crossing currencies has no effect.
+  /// crossing currencies has no effect. Reversals carry the kind of their
+  /// target, so reversing a payout restores the balance without touching the
+  /// raised figure.
   ///
   /// When there are no approved totals, [defaultCurrency] is included as a
   /// zero total so the ledger still has a currency to display.
@@ -51,26 +68,39 @@ class LedgerSummary {
     }
 
     final approvedById = {for (final entry in approved) entry.id: entry};
-    final totalsByCurrency = <String, int>{};
+    final raisedByCurrency = <String, int>{};
+    final balanceByCurrency = <String, int>{};
 
     for (final entry in approved) {
       if (!_countsTowardTotal(entry, approvedById)) {
         continue;
       }
-      totalsByCurrency.update(
+      balanceByCurrency.update(
         entry.currency,
         (total) => total + entry.signedAmountMinor,
         ifAbsent: () => entry.signedAmountMinor,
       );
+      if (entry.kind == EntryKind.contribution) {
+        raisedByCurrency.update(
+          entry.currency,
+          (total) => total + entry.signedAmountMinor,
+          ifAbsent: () => entry.signedAmountMinor,
+        );
+      }
     }
 
-    if (totalsByCurrency.isEmpty && defaultCurrency != null) {
-      totalsByCurrency[defaultCurrency] = 0;
+    if (balanceByCurrency.isEmpty && defaultCurrency != null) {
+      balanceByCurrency[defaultCurrency] = 0;
+      raisedByCurrency[defaultCurrency] = 0;
     }
 
     final totals = [
-      for (final entry in totalsByCurrency.entries)
-        CurrencyTotal(currency: entry.key, totalMinor: entry.value),
+      for (final entry in balanceByCurrency.entries)
+        CurrencyTotal(
+          currency: entry.key,
+          raisedMinor: raisedByCurrency[entry.key] ?? 0,
+          balanceMinor: entry.value,
+        ),
     ]..sort((a, b) => a.currency.compareTo(b.currency));
 
     _sortNewestFirst(approved);
@@ -98,11 +128,31 @@ class LedgerSummary {
 
   bool get isEmpty => approved.isEmpty && pending.isEmpty;
 
-  /// Approved total for [currency], or zero when it has no entries.
-  int totalMinorFor(String currency) {
+  /// Contributions raised in [currency], or zero when it has no entries.
+  int raisedMinorFor(String currency) {
     for (final total in totals) {
       if (total.currency == currency) {
-        return total.totalMinor;
+        return total.raisedMinor;
+      }
+    }
+    return 0;
+  }
+
+  /// What is left in [currency] after payouts, or zero without entries.
+  int balanceMinorFor(String currency) {
+    for (final total in totals) {
+      if (total.currency == currency) {
+        return total.balanceMinor;
+      }
+    }
+    return 0;
+  }
+
+  /// Money paid out of [currency], or zero when nothing was paid out.
+  int paidOutMinorFor(String currency) {
+    for (final total in totals) {
+      if (total.currency == currency) {
+        return total.paidOutMinor;
       }
     }
     return 0;
@@ -123,7 +173,9 @@ class LedgerSummary {
       return true;
     }
     final target = approvedById[entry.reversesEntryId];
-    return target != null && target.currency == entry.currency;
+    return target != null &&
+        target.currency == entry.currency &&
+        target.kind == entry.kind;
   }
 
   static void _sortNewestFirst(List<Entry> entries) {

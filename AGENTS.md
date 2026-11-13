@@ -55,6 +55,9 @@ rules.
   read-only (`is_fund_active` gates every write policy).
 - Reversals keep the target entry's currency and require a reason. Never mix
   currencies in a total.
+- A payout is an approved organizer entry with `kind = 'payout'`. It reduces
+  the balance but not the raised figure, requires a reason, and its reversal
+  keeps the payout kind. Show raised, paid out, and balance per currency.
 - Money is `int amountMinor` (smallest currency unit). Never use `double` for
   money and never parse amounts through `double`. `CurrencyCatalog` supplies
   ISO 4217 fraction digits; `intl` formats grouped whole units.

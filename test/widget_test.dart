@@ -555,6 +555,99 @@ void main() {
     expect(find.text('No entries yet'), findsOneWidget);
   });
 
+  testWidgets('organizers record a payout that lowers the balance', (
+    tester,
+  ) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(id: 'in', amountMinor: 5000, status: EntryStatus.approved),
+    );
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Class fund')],
+      entries: entries,
+    );
+
+    await tester.tap(find.text('Add entry'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Payout'));
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), '20');
+    await tester.enterText(fields.at(1), 'Teacher');
+    await tester.enterText(fields.at(2), 'Monthly class fee');
+    await tester.tap(find.widgetWithText(FilledButton, 'Record payout'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('USD 30.00'), findsOneWidget);
+    expect(find.text('-USD 20.00'), findsOneWidget);
+    expect(find.text('Payout'), findsOneWidget);
+  });
+
+  testWidgets('a payout needs a reason', (tester) async {
+    await _pumpSignedIn(tester, funds: [_fund('fund-a', 'Class fund')]);
+
+    await tester.tap(find.text('Add entry'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Payout'));
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), '20');
+    await tester.enterText(fields.at(1), 'Teacher');
+    final save = find.widgetWithText(FilledButton, 'Record payout');
+    await tester.ensureVisible(save);
+    await tester.drag(find.byType(ListView), const Offset(0, -120));
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter a reason for the payout'), findsOneWidget);
+    expect(find.text('Record payout'), findsWidgets);
+  });
+
+  testWidgets('a payout over the balance warns but is allowed', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(id: 'in', amountMinor: 5000, status: EntryStatus.approved),
+    );
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Class fund')],
+      entries: entries,
+    );
+
+    await tester.tap(find.text('Add entry'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Payout'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), '80');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('balance will go negative'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).at(0), '40');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('balance will go negative'), findsNothing);
+  });
+
+  testWidgets('members cannot record payouts', (tester) async {
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Class fund')],
+      role: MemberRole.member,
+    );
+
+    await tester.tap(find.text('Add entry'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Payout'), findsNothing);
+    expect(find.text('Contributor name'), findsOneWidget);
+  });
+
   testWidgets('organizers archive a fund and restore it', (tester) async {
     final fundRepository = FakeFundRepository(
       funds: [_fund('fund-a', 'Class fees')],
@@ -696,6 +789,7 @@ Entry _entry({
   required int amountMinor,
   String currency = 'USD',
   EntryStatus status = EntryStatus.pending,
+  EntryKind kind = EntryKind.contribution,
   String note = '',
 }) {
   return Entry(
@@ -707,6 +801,7 @@ Entry _entry({
     note: note,
     createdAt: DateTime(2026, 1, 1),
     status: status,
+    kind: kind,
   );
 }
 

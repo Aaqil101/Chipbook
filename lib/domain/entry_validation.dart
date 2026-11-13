@@ -27,6 +27,16 @@ abstract final class EntryValidation {
     return raw.trim().isEmpty ? 'Name is required' : null;
   }
 
+  /// A payout must name who was paid.
+  static String? payeeError(String raw) {
+    return raw.trim().isEmpty ? 'Enter who was paid' : null;
+  }
+
+  /// A payout must explain what it was for.
+  static String? payoutReasonError(String raw) {
+    return raw.trim().isEmpty ? 'Enter a reason for the payout' : null;
+  }
+
   /// A reversal must explain why the original entry is being corrected.
   static String? reversalReasonError(String raw) {
     return raw.trim().isEmpty ? 'Enter a reason for the reversal' : null;

@@ -37,6 +37,7 @@ class SupabaseEntryRepository implements EntryRepository {
         'note': entry.note,
         'status': entry.status == EntryStatus.approved ? 'approved' : 'pending',
         'reverses_entry_id': entry.reversesEntryId,
+        'kind': entry.kind == EntryKind.payout ? 'payout' : 'contribution',
       });
     } on Object catch (error) {
       throw supabaseFailure('Could not add the entry', error);
@@ -78,6 +79,7 @@ class SupabaseEntryRepository implements EntryRepository {
           ? EntryStatus.approved
           : EntryStatus.pending,
       reversesEntryId: row['reverses_entry_id'] as String?,
+      kind: row['kind'] == 'payout' ? EntryKind.payout : EntryKind.contribution,
     );
   }
 }

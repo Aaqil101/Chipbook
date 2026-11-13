@@ -57,7 +57,10 @@ class LedgerController extends ChangeNotifier {
   /// Appends a new entry and refreshes the exposed state.
   ///
   /// [currency] defaults to [defaultCurrency]. Unknown ISO 4217 codes are
-  /// rejected before anything reaches the repository.
+  /// rejected before anything reaches the repository. A [kind] of
+  /// [EntryKind.payout] that is not a reversal is always approved, because
+  /// paying money out is an organizer decision, and requires a non-empty
+  /// [note] as its reason.
   Future<Entry> addEntry({
     required int amountMinor,
     required String contributorName,
@@ -65,17 +68,27 @@ class LedgerController extends ChangeNotifier {
     String? currency,
     EntryStatus status = EntryStatus.pending,
     String? reversesEntryId,
+    EntryKind kind = EntryKind.contribution,
   }) async {
+    final isPayout = kind == EntryKind.payout && reversesEntryId == null;
+    final trimmedNote = note.trim();
+    if (isPayout) {
+      if (trimmedNote.isEmpty) {
+        throw ArgumentError.value(note, 'note', 'a payout needs a reason');
+      }
+    }
+
     final entry = Entry(
       id: _uuid.v4(),
       fundId: fundId,
       amountMinor: amountMinor,
       currency: _normalizeCurrency(currency),
       contributorName: contributorName.trim(),
-      note: note.trim(),
+      note: trimmedNote,
       createdAt: _clock(),
-      status: status,
+      status: isPayout ? EntryStatus.approved : status,
       reversesEntryId: reversesEntryId,
+      kind: kind,
     );
 
     await _repository.add(entry);
@@ -91,8 +104,8 @@ class LedgerController extends ChangeNotifier {
 
   /// Records a new approved entry that reverses [target].
   ///
-  /// Reversals carry the original amount, contributor, and currency, so only
-  /// that currency's total drops. The original entry is never changed.
+  /// Reversals carry the original amount, contributor, currency, and kind, so
+  /// only that currency's figures change. The original entry is never changed.
   Future<Entry> reverse({required Entry target, required String reason}) async {
     final note = reason.trim();
     if (note.isEmpty) {
@@ -118,6 +131,7 @@ class LedgerController extends ChangeNotifier {
       currency: target.currency,
       status: EntryStatus.approved,
       reversesEntryId: target.id,
+      kind: target.kind,
     );
   }
 

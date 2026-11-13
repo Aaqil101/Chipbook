@@ -22,7 +22,7 @@ void main() {
 
     expect(entry.fundId, 'fund-a');
     expect(entry.status, EntryStatus.pending);
-    expect(controller.summary.totalMinorFor('USD'), 0);
+    expect(controller.summary.balanceMinorFor('USD'), 0);
     expect(controller.summary.pending, hasLength(1));
   });
 
@@ -38,7 +38,7 @@ void main() {
     );
     await controller.approve(entry.id);
 
-    expect(controller.summary.totalMinorFor('USD'), 2500);
+    expect(controller.summary.balanceMinorFor('USD'), 2500);
     expect(controller.summary.approved.single.id, entry.id);
   });
 
@@ -69,7 +69,7 @@ void main() {
     expect(reversal.amountMinor, target.amountMinor);
     expect(reversal.contributorName, target.contributorName);
     expect(reversal.note, 'Recorded twice');
-    expect(controller.summary.totalMinorFor('USD'), 0);
+    expect(controller.summary.balanceMinorFor('USD'), 0);
     expect(controller.summary.approved, hasLength(2));
   });
 
@@ -93,8 +93,8 @@ void main() {
 
     expect(usd.currency, 'USD');
     expect(jpy.currency, 'JPY');
-    expect(controller.summary.totalMinorFor('USD'), 2500);
-    expect(controller.summary.totalMinorFor('JPY'), 1500);
+    expect(controller.summary.balanceMinorFor('USD'), 2500);
+    expect(controller.summary.balanceMinorFor('JPY'), 1500);
   });
 
   test('reversals use the target currency and leave others alone', () async {
@@ -118,8 +118,8 @@ void main() {
     final reversal = await controller.reverse(target: usd, reason: 'Mistake');
 
     expect(reversal.currency, 'USD');
-    expect(controller.summary.totalMinorFor('USD'), 0);
-    expect(controller.summary.totalMinorFor('EUR'), 3000);
+    expect(controller.summary.balanceMinorFor('USD'), 0);
+    expect(controller.summary.balanceMinorFor('EUR'), 3000);
   });
 
   test('rejects unknown currency codes', () async {
@@ -192,6 +192,97 @@ void main() {
       controller.reverse(target: target, reason: 'Mistake again'),
       throwsArgumentError,
     );
+  });
+
+  test('a payout is approved immediately and lowers the balance', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+    await controller.addEntry(
+      amountMinor: 5000,
+      contributorName: 'Ada',
+      status: EntryStatus.approved,
+    );
+    final payout = await controller.addEntry(
+      amountMinor: 2000,
+      contributorName: 'Teacher',
+      note: '  Monthly class fee  ',
+      kind: EntryKind.payout,
+    );
+
+    expect(payout.status, EntryStatus.approved);
+    expect(payout.isPayout, isTrue);
+    expect(payout.note, 'Monthly class fee');
+    expect(controller.summary.raisedMinorFor('USD'), 5000);
+    expect(controller.summary.balanceMinorFor('USD'), 3000);
+    expect(controller.summary.paidOutMinorFor('USD'), 2000);
+  });
+
+  test('a payout ignores a requested pending status', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+    final payout = await controller.addEntry(
+      amountMinor: 1000,
+      contributorName: 'Teacher',
+      note: 'Class fee',
+      kind: EntryKind.payout,
+      status: EntryStatus.pending,
+    );
+
+    expect(payout.status, EntryStatus.approved);
+  });
+
+  test('rejects a payout without a reason', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+
+    await expectLater(
+      controller.addEntry(
+        amountMinor: 1000,
+        contributorName: 'Teacher',
+        note: '   ',
+        kind: EntryKind.payout,
+      ),
+      throwsArgumentError,
+    );
+    expect(controller.entries, isEmpty);
+  });
+
+  test('reversing a payout restores the balance with its kind', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+    await controller.addEntry(
+      amountMinor: 5000,
+      contributorName: 'Ada',
+      status: EntryStatus.approved,
+    );
+    final payout = await controller.addEntry(
+      amountMinor: 2000,
+      contributorName: 'Teacher',
+      note: 'Class fee',
+      kind: EntryKind.payout,
+    );
+
+    final reversal = await controller.reverse(
+      target: payout,
+      reason: 'Paid twice',
+    );
+
+    expect(reversal.kind, EntryKind.payout);
+    expect(reversal.isReversal, isTrue);
+    expect(controller.summary.balanceMinorFor('USD'), 5000);
+    expect(controller.summary.paidOutMinorFor('USD'), 0);
   });
 
   test('does not load entries from other funds', () async {

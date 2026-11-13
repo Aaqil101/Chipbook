@@ -703,6 +703,131 @@ select pg_temp.assert_raises_message(
 reset role;
 
 -- ---------------------------------------------------------------------------
+-- Payouts: organizer-only, approved on creation, and must say why.
+-- ---------------------------------------------------------------------------
+
+select set_config(
+  'request.jwt.claim.sub',
+  '22222222-2222-4222-8222-222222222222',
+  true
+);
+set local role authenticated;
+
+select pg_temp.assert_raises(
+  $stmt$
+    insert into public.entries (
+      fund_id, amount_minor, currency, contributor_name, note, status, kind
+    ) values (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2000, 'USD', 'Teacher',
+      'Class fee', 'approved', 'payout'
+    )
+  $stmt$,
+  '42501',
+  'a member cannot record a payout'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '11111111-1111-4111-8111-111111111111',
+  true
+);
+
+select pg_temp.assert_raises_message(
+  $stmt$
+    insert into public.entries (
+      fund_id, amount_minor, currency, contributor_name, note, status, kind
+    ) values (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2000, 'USD', 'Teacher',
+      'Class fee', 'pending', 'payout'
+    )
+  $stmt$,
+  'payouts must be approved when created',
+  'a payout cannot wait for approval'
+);
+
+select pg_temp.assert_raises_message(
+  $stmt$
+    insert into public.entries (
+      fund_id, amount_minor, currency, contributor_name, note, status, kind
+    ) values (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2000, 'USD', 'Teacher',
+      '', 'approved', 'payout'
+    )
+  $stmt$,
+  'a payout needs a reason',
+  'a payout must explain what it paid for'
+);
+
+insert into public.entries (
+  id, fund_id, amount_minor, currency, contributor_name, note, status, kind
+) values (
+  'e7777777-7777-4777-8777-777777777777',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  2000,
+  'USD',
+  'Teacher',
+  'Class fee',
+  'approved',
+  'payout'
+);
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.entries
+    where id = 'e7777777-7777-4777-8777-777777777777'
+      and kind = 'payout'
+      and approved_at is not null
+      and approved_by = '11111111-1111-4111-8111-111111111111'
+  ),
+  1,
+  'an organizer can record an approved payout'
+);
+
+select pg_temp.assert_raises_message(
+  $stmt$
+    insert into public.entries (
+      fund_id, amount_minor, currency, contributor_name, note, status,
+      reverses_entry_id
+    ) values (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2000, 'USD', 'Teacher',
+      'Wrong kind', 'approved', 'e7777777-7777-4777-8777-777777777777'
+    )
+  $stmt$,
+  'reversal kind must match the target',
+  'a payout reversal must keep the payout kind'
+);
+
+insert into public.entries (
+  id, fund_id, amount_minor, currency, contributor_name, note, status,
+  reverses_entry_id, kind
+) values (
+  'e8888888-8888-4888-8888-888888888888',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  2000,
+  'USD',
+  'Teacher',
+  'Paid twice',
+  'approved',
+  'e7777777-7777-4777-8777-777777777777',
+  'payout'
+);
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.entries
+    where id = 'e8888888-8888-4888-8888-888888888888'
+      and kind = 'payout'
+      and reverses_entry_id = 'e7777777-7777-4777-8777-777777777777'
+  ),
+  1,
+  'an organizer can reverse a payout'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
 -- Approvals and immutability.
 -- ---------------------------------------------------------------------------
 
