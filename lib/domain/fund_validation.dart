@@ -1,7 +1,7 @@
+import 'currency.dart';
+
 /// Validation for creating a fund.
 abstract final class FundValidation {
-  static final RegExp _currencyCode = RegExp(r'^[A-Z]{3}$');
-
   static String? nameError(String raw) {
     final value = raw.trim();
     if (value.isEmpty) {
@@ -14,10 +14,8 @@ abstract final class FundValidation {
   }
 
   static String? currencyError(String raw) {
-    final value = raw.trim().toUpperCase();
-    if (!_currencyCode.hasMatch(value)) {
-      return 'Use a 3-letter code like USD';
-    }
-    return null;
+    return CurrencyCatalog.byCode(raw) == null
+        ? 'Choose a supported currency'
+        : null;
   }
 }

@@ -482,6 +482,78 @@ void main() {
     expect(find.text('Trip fund'), findsOneWidget);
     expect(find.text('Invite accepted'), findsOneWidget);
   });
+
+  testWidgets('add-entry form picks a currency and groups its total', (
+    tester,
+  ) async {
+    await _pumpSignedIn(tester, funds: [_fund('fund-a', 'Trip fund')]);
+
+    await tester.tap(find.text('Add entry'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('USD · US Dollar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('UYU · Uruguayan Peso').last);
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), '1500');
+    await tester.enterText(fields.at(1), 'Grace');
+    await tester.tap(find.text('Save entry'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('UYU 1,500.00'), findsOneWidget);
+
+    await tester.tap(find.text('Approve'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('UYU 1,500.00'), findsNWidgets(2));
+    expect(find.text('USD 0.00'), findsNothing);
+  });
+
+  testWidgets('totals are grouped per currency', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(id: 'usd', amountMinor: 5000, status: EntryStatus.approved),
+    );
+    await entries.add(
+      _entry(
+        id: 'eur',
+        amountMinor: 3000,
+        currency: 'EUR',
+        status: EntryStatus.approved,
+      ),
+    );
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    expect(find.text('USD 50.00'), findsNWidgets(2));
+    expect(find.text('EUR 30.00'), findsNWidgets(2));
+  });
+
+  testWidgets('creating a fund picks its default currency', (tester) async {
+    final fundRepository = FakeFundRepository();
+    await _pumpSignedIn(tester, fundRepository: fundRepository);
+
+    await tester.tap(find.text('Create a fund'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Travel fund');
+    await tester.tap(find.text('USD · US Dollar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('UYU · Uruguayan Peso').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create'));
+    await tester.pumpAndSettle();
+
+    expect(fundRepository.funds.single.defaultCurrency, 'UYU');
+    expect(find.text('Travel fund'), findsOneWidget);
+    expect(find.text('No entries yet'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpSignedIn(
@@ -538,6 +610,7 @@ Membership _membership(String userId, String email, MemberRole role) {
 Entry _entry({
   required String id,
   required int amountMinor,
+  String currency = 'USD',
   EntryStatus status = EntryStatus.pending,
   String note = '',
 }) {
@@ -545,7 +618,7 @@ Entry _entry({
     id: id,
     fundId: 'fund-a',
     amountMinor: amountMinor,
-    currency: 'USD',
+    currency: currency,
     contributorName: 'Ada',
     note: note,
     createdAt: DateTime(2026, 1, 1),
@@ -591,6 +664,8 @@ class FakeFundRepository implements FundRepository {
 
   final List<Fund> _funds;
   int _nextId = 0;
+
+  List<Fund> get funds => List.unmodifiable(_funds);
 
   void addFund(Fund fund) => _funds.add(fund);
 

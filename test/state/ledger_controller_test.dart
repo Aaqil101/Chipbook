@@ -22,7 +22,7 @@ void main() {
 
     expect(entry.fundId, 'fund-a');
     expect(entry.status, EntryStatus.pending);
-    expect(controller.summary.totalMinor, 0);
+    expect(controller.summary.totalMinorFor('USD'), 0);
     expect(controller.summary.pending, hasLength(1));
   });
 
@@ -38,7 +38,7 @@ void main() {
     );
     await controller.approve(entry.id);
 
-    expect(controller.summary.totalMinor, 2500);
+    expect(controller.summary.totalMinorFor('USD'), 2500);
     expect(controller.summary.approved.single.id, entry.id);
   });
 
@@ -69,8 +69,75 @@ void main() {
     expect(reversal.amountMinor, target.amountMinor);
     expect(reversal.contributorName, target.contributorName);
     expect(reversal.note, 'Recorded twice');
-    expect(controller.summary.totalMinor, 0);
+    expect(controller.summary.totalMinorFor('USD'), 0);
     expect(controller.summary.approved, hasLength(2));
+  });
+
+  test('adds entries in the selected currency', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+    final usd = await controller.addEntry(
+      amountMinor: 2500,
+      contributorName: 'Ada',
+      status: EntryStatus.approved,
+    );
+    final jpy = await controller.addEntry(
+      amountMinor: 1500,
+      contributorName: 'Grace',
+      currency: 'JPY',
+      status: EntryStatus.approved,
+    );
+
+    expect(usd.currency, 'USD');
+    expect(jpy.currency, 'JPY');
+    expect(controller.summary.totalMinorFor('USD'), 2500);
+    expect(controller.summary.totalMinorFor('JPY'), 1500);
+  });
+
+  test('reversals use the target currency and leave others alone', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+    final usd = await controller.addEntry(
+      amountMinor: 5000,
+      contributorName: 'Ada',
+      status: EntryStatus.approved,
+    );
+    await controller.addEntry(
+      amountMinor: 3000,
+      contributorName: 'Grace',
+      currency: 'EUR',
+      status: EntryStatus.approved,
+    );
+
+    final reversal = await controller.reverse(target: usd, reason: 'Mistake');
+
+    expect(reversal.currency, 'USD');
+    expect(controller.summary.totalMinorFor('USD'), 0);
+    expect(controller.summary.totalMinorFor('EUR'), 3000);
+  });
+
+  test('rejects unknown currency codes', () async {
+    final repository = InMemoryEntryRepository();
+    final controller = LedgerController(repository, fundId: 'fund-a');
+    addTearDown(controller.dispose);
+
+    await controller.load();
+
+    await expectLater(
+      controller.addEntry(
+        amountMinor: 1000,
+        contributorName: 'Ada',
+        currency: 'ZZZ',
+      ),
+      throwsArgumentError,
+    );
+    expect(controller.entries, isEmpty);
   });
 
   test('rejects reversing a pending entry', () async {

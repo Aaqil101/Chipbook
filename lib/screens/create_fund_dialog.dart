@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../config.dart';
+import '../domain/currency.dart';
 import '../domain/fund_validation.dart';
 
 /// Values collected by [CreateFundDialog].
@@ -17,14 +18,19 @@ class CreateFundDialog extends StatefulWidget {
 class _CreateFundDialogState extends State<CreateFundDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _currencyController = TextEditingController(
-    text: AppConfig.defaultCurrency,
-  );
+  late String _currency;
+
+  @override
+  void initState() {
+    super.initState();
+    _currency =
+        CurrencyCatalog.byCode(AppConfig.defaultCurrency)?.code ??
+        CurrencyCatalog.currencies.first.code;
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _currencyController.dispose();
     super.dispose();
   }
 
@@ -33,10 +39,9 @@ class _CreateFundDialogState extends State<CreateFundDialog> {
       return;
     }
 
-    Navigator.of(context).pop<FundDraft>((
-      name: _nameController.text.trim(),
-      currency: _currencyController.text.trim().toUpperCase(),
-    ));
+    Navigator.of(
+      context,
+    ).pop<FundDraft>((name: _nameController.text.trim(), currency: _currency));
   }
 
   @override
@@ -57,16 +62,29 @@ class _CreateFundDialogState extends State<CreateFundDialog> {
               validator: (value) => FundValidation.nameError(value ?? ''),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _currencyController,
-              textCapitalization: TextCapitalization.characters,
-              maxLength: 3,
+            DropdownButtonFormField<String>(
+              initialValue: _currency,
+              isExpanded: true,
+              menuMaxHeight: 420,
               decoration: const InputDecoration(
-                labelText: 'Currency',
-                helperText: '3-letter ISO code, e.g. USD',
+                labelText: 'Default currency',
+                helperText: 'New entries start in this currency',
               ),
-              validator: (value) => FundValidation.currencyError(value ?? ''),
-              onFieldSubmitted: (_) => _submit(),
+              items: [
+                for (final currency in CurrencyCatalog.currencies)
+                  DropdownMenuItem<String>(
+                    value: currency.code,
+                    child: Text(
+                      currency.label,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (code) {
+                if (code != null) {
+                  setState(() => _currency = code);
+                }
+              },
             ),
           ],
         ),

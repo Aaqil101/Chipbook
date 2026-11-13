@@ -1,16 +1,20 @@
+import '../config.dart';
 import 'money.dart';
 
 /// User-facing validation rules for recording a contribution.
 abstract final class EntryValidation {
   /// Returns an error message for [raw], or null when it is valid.
-  static String? amountError(String raw) {
+  static String? amountError(
+    String raw, {
+    String currency = AppConfig.defaultCurrency,
+  }) {
     if (raw.trim().isEmpty) {
       return 'Enter an amount';
     }
 
-    final amountMinor = Money.tryParseToMinor(raw);
+    final amountMinor = Money.tryParseToMinor(raw, currency: currency);
     if (amountMinor == null) {
-      return 'Enter an amount like 25.00';
+      return 'Enter a valid amount for $currency';
     }
     if (amountMinor <= 0) {
       return 'Amount must be greater than zero';

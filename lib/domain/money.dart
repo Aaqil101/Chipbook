@@ -1,19 +1,25 @@
+import 'package:intl/intl.dart';
+
 import '../config.dart';
+import 'currency.dart';
 
 /// Formatting and parsing helpers for integer minor-unit amounts.
 abstract final class Money {
+  static final NumberFormat _groupedWhole = NumberFormat('#,##0', 'en_US');
+
   /// Formats [amountMinor] for display, for example `USD 25.00`.
   ///
-  /// Phase 1 assumes a two-decimal currency.
+  /// Fraction digits come from [CurrencyCatalog], so yen and dinars render
+  /// with the right number of decimals.
   static String format(
     int amountMinor, {
     String currency = AppConfig.defaultCurrency,
-    int decimals = 2,
   }) {
+    final decimals = CurrencyCatalog.fractionDigitsFor(currency);
     final factor = _factor(decimals);
     final sign = amountMinor < 0 ? '-' : '';
     final absolute = amountMinor.abs();
-    final whole = absolute ~/ factor;
+    final whole = _groupedWhole.format(absolute ~/ factor);
 
     if (decimals == 0) {
       return '$sign$currency $whole';
@@ -26,9 +32,13 @@ abstract final class Money {
   /// Parses a decimal string such as `25.00` into integer minor units.
   ///
   /// Returns null for empty input, negatives, separators other than `.`,
-  /// and fractions longer than [decimals]. Zero parses successfully;
-  /// callers decide whether zero is acceptable.
-  static int? tryParseToMinor(String input, {int decimals = 2}) {
+  /// and fractions longer than the currency's fraction digits. Zero parses
+  /// successfully; callers decide whether zero is acceptable.
+  static int? tryParseToMinor(
+    String input, {
+    String currency = AppConfig.defaultCurrency,
+  }) {
+    final decimals = CurrencyCatalog.fractionDigitsFor(currency);
     final text = input.trim();
     if (text.isEmpty) {
       return null;

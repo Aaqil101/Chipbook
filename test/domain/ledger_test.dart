@@ -5,13 +5,20 @@ import 'package:chipbook/models/entry.dart';
 
 void main() {
   group('LedgerSummary', () {
-    test('empty ledger has a zero total', () {
-      final summary = LedgerSummary.from(const [], currency: 'USD');
+    test('empty ledger has no totals', () {
+      final summary = LedgerSummary.from(const []);
 
-      expect(summary.totalMinor, 0);
+      expect(summary.totals, isEmpty);
       expect(summary.approved, isEmpty);
       expect(summary.pending, isEmpty);
       expect(summary.isEmpty, isTrue);
+    });
+
+    test('empty ledger can still show its default currency', () {
+      final summary = LedgerSummary.from(const [], defaultCurrency: 'USD');
+
+      expect(summary.totals, hasLength(1));
+      expect(summary.totalMinorFor('USD'), 0);
     });
 
     test('sums approved entries only', () {
@@ -19,40 +26,77 @@ void main() {
         _entry(id: 'a', amountMinor: 1000),
         _entry(id: 'b', amountMinor: 2500),
         _entry(id: 'c', amountMinor: 9000, status: EntryStatus.pending),
-      ], currency: 'USD');
+      ]);
 
-      expect(summary.totalMinor, 3500);
+      expect(summary.totalMinorFor('USD'), 3500);
       expect(summary.approved, hasLength(2));
       expect(summary.pending, hasLength(1));
       expect(summary.pending.single.id, 'c');
     });
 
-    test('an approved reversal subtracts from the total', () {
+    test('groups totals by currency instead of mixing them', () {
       final summary = LedgerSummary.from([
-        _entry(id: 'a', amountMinor: 5000),
-        _entry(id: 'r', amountMinor: 5000, reversesEntryId: 'a'),
-      ], currency: 'USD');
+        _entry(id: 'usd-a', amountMinor: 1000),
+        _entry(id: 'eur', amountMinor: 2000, currency: 'EUR'),
+        _entry(id: 'usd-b', amountMinor: 500),
+        _entry(
+          id: 'jpy',
+          amountMinor: 300,
+          currency: 'JPY',
+          status: EntryStatus.pending,
+        ),
+      ]);
 
-      expect(summary.totalMinor, 0);
-      expect(summary.approved, hasLength(2));
+      expect(summary.totals, hasLength(2));
+      expect(summary.totalMinorFor('USD'), 1500);
+      expect(summary.totalMinorFor('EUR'), 2000);
+      expect(summary.totalMinorFor('JPY'), 0);
+      expect(summary.totals.map((total) => total.currency), ['EUR', 'USD']);
+    });
+
+    test('an approved reversal subtracts from its own currency', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'usd', amountMinor: 5000),
+        _entry(id: 'eur', amountMinor: 3000, currency: 'EUR'),
+        _entry(id: 'r', amountMinor: 5000, reversesEntryId: 'usd'),
+      ]);
+
+      expect(summary.totalMinorFor('USD'), 0);
+      expect(summary.totalMinorFor('EUR'), 3000);
+      expect(summary.approved, hasLength(3));
+    });
+
+    test('a cross-currency reversal never changes a total', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'usd', amountMinor: 5000),
+        _entry(
+          id: 'r',
+          amountMinor: 5000,
+          currency: 'EUR',
+          reversesEntryId: 'usd',
+        ),
+      ]);
+
+      expect(summary.totalMinorFor('USD'), 5000);
+      expect(summary.totalMinorFor('EUR'), 0);
     });
 
     test('a partial reversal subtracts only its own amount', () {
       final summary = LedgerSummary.from([
         _entry(id: 'a', amountMinor: 5000),
         _entry(id: 'r', amountMinor: 2000, reversesEntryId: 'a'),
-      ], currency: 'USD');
+      ]);
 
-      expect(summary.totalMinor, 3000);
+      expect(summary.totalMinorFor('USD'), 3000);
     });
 
     test('reversing a pending entry does not change the total', () {
       final summary = LedgerSummary.from([
         _entry(id: 'a', amountMinor: 5000, status: EntryStatus.pending),
         _entry(id: 'r', amountMinor: 5000, reversesEntryId: 'a'),
-      ], currency: 'USD');
+      ]);
 
-      expect(summary.totalMinor, 0);
+      expect(summary.totals, isEmpty);
       expect(summary.approved, hasLength(1));
       expect(summary.pending, hasLength(1));
     });
@@ -66,9 +110,9 @@ void main() {
           status: EntryStatus.pending,
           reversesEntryId: 'a',
         ),
-      ], currency: 'USD');
+      ]);
 
-      expect(summary.totalMinor, 5000);
+      expect(summary.totalMinorFor('USD'), 5000);
     });
 
     test('tracks which entries already have a reversal', () {
@@ -76,7 +120,7 @@ void main() {
         _entry(id: 'a', amountMinor: 5000),
         _entry(id: 'b', amountMinor: 3000),
         _entry(id: 'r', amountMinor: 5000, reversesEntryId: 'a'),
-      ], currency: 'USD');
+      ]);
 
       expect(summary.reversedEntryIds, {'a'});
       expect(summary.canReverse(_find(summary.approved, 'a')), isFalse);
@@ -89,7 +133,7 @@ void main() {
         _entry(id: 'approved', amountMinor: 5000),
         _entry(id: 'pending', amountMinor: 5000, status: EntryStatus.pending),
         _entry(id: 'reversal', amountMinor: 5000, reversesEntryId: 'approved'),
-      ], currency: 'USD');
+      ]);
 
       expect(summary.canReverse(_find(summary.approved, 'approved')), isFalse);
       expect(summary.canReverse(summary.pending.single), isFalse);
@@ -100,18 +144,22 @@ void main() {
       final summary = LedgerSummary.from([
         _entry(id: 'old', amountMinor: 1000, createdAt: DateTime(2026, 1, 1)),
         _entry(id: 'new', amountMinor: 1000, createdAt: DateTime(2026, 2, 1)),
-      ], currency: 'USD');
+      ]);
 
       expect(summary.approved.map((entry) => entry.id), ['new', 'old']);
     });
 
-    test('exposes unmodifiable lists', () {
-      final summary = LedgerSummary.from([
-        _entry(id: 'a', amountMinor: 1000),
-      ], currency: 'USD');
+    test('exposes unmodifiable lists and totals', () {
+      final summary = LedgerSummary.from([_entry(id: 'a', amountMinor: 1000)]);
 
       expect(
         () => summary.approved.add(_entry(id: 'b', amountMinor: 1000)),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => summary.totals.add(
+          const CurrencyTotal(currency: 'EUR', totalMinor: 0),
+        ),
         throwsUnsupportedError,
       );
     });
@@ -125,6 +173,7 @@ Entry _find(List<Entry> entries, String id) {
 Entry _entry({
   required String id,
   required int amountMinor,
+  String currency = 'USD',
   EntryStatus status = EntryStatus.approved,
   String? reversesEntryId,
   DateTime? createdAt,
@@ -133,7 +182,7 @@ Entry _entry({
     id: id,
     fundId: 'fund-a',
     amountMinor: amountMinor,
-    currency: 'USD',
+    currency: currency,
     contributorName: 'Ada',
     createdAt: createdAt ?? DateTime(2026, 1, 1),
     status: status,

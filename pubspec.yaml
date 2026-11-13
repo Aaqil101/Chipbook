@@ -37,6 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.18.3
   uuid: ^4.6.0
+  # Formats grouped whole units while amounts stay exact integers.
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:

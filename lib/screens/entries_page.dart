@@ -275,13 +275,23 @@ class _TotalCard extends StatelessWidget {
               style: theme.textTheme.titleMedium?.copyWith(color: foreground),
             ),
             const SizedBox(height: 8),
-            Text(
-              Money.format(summary.totalMinor, currency: summary.currency),
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            if (summary.totals.isEmpty)
+              Text(
+                'No approved totals yet',
+                style: theme.textTheme.titleMedium?.copyWith(color: foreground),
+              )
+            else
+              for (final total in summary.totals)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    Money.format(total.totalMinor, currency: total.currency),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
             const SizedBox(height: 4),
             Text(
               '${summary.approved.length} approved · '

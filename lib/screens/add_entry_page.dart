@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../config.dart';
+import '../domain/currency.dart';
 import '../domain/entry_validation.dart';
 import '../domain/money.dart';
 import '../state/ledger_controller.dart';
@@ -17,10 +18,21 @@ class AddEntryPage extends StatefulWidget {
 
 class _AddEntryPageState extends State<AddEntryPage> {
   final _formKey = GlobalKey<FormState>();
+  final _amountFieldKey = GlobalKey<FormFieldState<String>>();
   final _amountController = TextEditingController();
   final _nameController = TextEditingController();
   final _noteController = TextEditingController();
+  late String _currency;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currency =
+        CurrencyCatalog.byCode(widget.controller.defaultCurrency)?.code ??
+        CurrencyCatalog.byCode(AppConfig.defaultCurrency)?.code ??
+        CurrencyCatalog.currencies.first.code;
+  }
 
   @override
   void dispose() {
@@ -35,7 +47,10 @@ class _AddEntryPageState extends State<AddEntryPage> {
       return;
     }
 
-    final amountMinor = Money.tryParseToMinor(_amountController.text);
+    final amountMinor = Money.tryParseToMinor(
+      _amountController.text,
+      currency: _currency,
+    );
     if (amountMinor == null) {
       return;
     }
@@ -46,6 +61,7 @@ class _AddEntryPageState extends State<AddEntryPage> {
         amountMinor: amountMinor,
         contributorName: _nameController.text,
         note: _noteController.text,
+        currency: _currency,
       );
       if (!mounted) {
         return;
@@ -67,7 +83,31 @@ class _AddEntryPageState extends State<AddEntryPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            DropdownButtonFormField<String>(
+              initialValue: _currency,
+              isExpanded: true,
+              menuMaxHeight: 420,
+              decoration: const InputDecoration(labelText: 'Currency'),
+              items: [
+                for (final currency in CurrencyCatalog.currencies)
+                  DropdownMenuItem<String>(
+                    value: currency.code,
+                    child: Text(
+                      currency.label,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (code) {
+                if (code != null) {
+                  setState(() => _currency = code);
+                  _amountFieldKey.currentState?.validate();
+                }
+              },
+            ),
+            const SizedBox(height: 16),
             TextFormField(
+              key: _amountFieldKey,
               controller: _amountController,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(
@@ -76,10 +116,11 @@ class _AddEntryPageState extends State<AddEntryPage> {
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: 'Amount',
-                prefixText: '${AppConfig.defaultCurrency} ',
-                hintText: '0.00',
+                prefixText: '$_currency ',
+                hintText: _amountHint(_currency),
               ),
-              validator: (value) => EntryValidation.amountError(value ?? ''),
+              validator: (value) =>
+                  EntryValidation.amountError(value ?? '', currency: _currency),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -113,5 +154,10 @@ class _AddEntryPageState extends State<AddEntryPage> {
         ),
       ),
     );
+  }
+
+  String _amountHint(String currency) {
+    final digits = CurrencyCatalog.fractionDigitsFor(currency);
+    return digits == 0 ? '0' : '0.${'0' * digits}';
   }
 }

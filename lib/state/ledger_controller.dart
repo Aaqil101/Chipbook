@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config.dart';
+import '../domain/currency.dart';
 import '../domain/ledger.dart';
 import '../models/entry.dart';
 import '../repositories/entry_repository.dart';
@@ -11,7 +12,7 @@ class LedgerController extends ChangeNotifier {
   LedgerController(
     this._repository, {
     required this.fundId,
-    this.currency = AppConfig.defaultCurrency,
+    this.defaultCurrency = AppConfig.defaultCurrency,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
 
@@ -22,8 +23,8 @@ class LedgerController extends ChangeNotifier {
   /// Fund whose entries this controller manages.
   final String fundId;
 
-  /// ISO 4217 code assigned to new entries and used for display.
-  final String currency;
+  /// ISO 4217 code selected by default when adding an entry.
+  final String defaultCurrency;
 
   List<Entry> _entries = const <Entry>[];
   LedgerSummary? _summary;
@@ -32,9 +33,11 @@ class LedgerController extends ChangeNotifier {
   /// Every entry in repository (append) order.
   List<Entry> get entries => _entries;
 
-  /// Approved total and the approved/pending split, newest first.
-  LedgerSummary get summary =>
-      _summary ??= LedgerSummary.from(_entries, currency: currency);
+  /// Per-currency totals and the approved/pending split, newest first.
+  LedgerSummary get summary => _summary ??= LedgerSummary.from(
+    _entries,
+    defaultCurrency: defaultCurrency,
+  );
 
   bool get isLoading => _isLoading;
 
@@ -52,10 +55,14 @@ class LedgerController extends ChangeNotifier {
   }
 
   /// Appends a new entry and refreshes the exposed state.
+  ///
+  /// [currency] defaults to [defaultCurrency]. Unknown ISO 4217 codes are
+  /// rejected before anything reaches the repository.
   Future<Entry> addEntry({
     required int amountMinor,
     required String contributorName,
     String note = '',
+    String? currency,
     EntryStatus status = EntryStatus.pending,
     String? reversesEntryId,
   }) async {
@@ -63,7 +70,7 @@ class LedgerController extends ChangeNotifier {
       id: _uuid.v4(),
       fundId: fundId,
       amountMinor: amountMinor,
-      currency: currency,
+      currency: _normalizeCurrency(currency),
       contributorName: contributorName.trim(),
       note: note.trim(),
       createdAt: _clock(),
@@ -84,8 +91,8 @@ class LedgerController extends ChangeNotifier {
 
   /// Records a new approved entry that reverses [target].
   ///
-  /// Reversals carry the original amount and contributor, so the total drops
-  /// by exactly the reversed amount. The original entry is never changed.
+  /// Reversals carry the original amount, contributor, and currency, so only
+  /// that currency's total drops. The original entry is never changed.
   Future<Entry> reverse({required Entry target, required String reason}) async {
     final note = reason.trim();
     if (note.isEmpty) {
@@ -108,9 +115,22 @@ class LedgerController extends ChangeNotifier {
       amountMinor: target.amountMinor,
       contributorName: target.contributorName,
       note: note,
+      currency: target.currency,
       status: EntryStatus.approved,
       reversesEntryId: target.id,
     );
+  }
+
+  String _normalizeCurrency(String? raw) {
+    final code = (raw ?? defaultCurrency).trim().toUpperCase();
+    if (CurrencyCatalog.byCode(code) == null) {
+      throw ArgumentError.value(
+        raw,
+        'currency',
+        'not a supported ISO 4217 currency',
+      );
+    }
+    return code;
   }
 
   Future<void> _reload() async {

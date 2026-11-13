@@ -22,9 +22,10 @@ void main() {
       expect(FundValidation.currencyError('usd'), isNull);
     });
 
-    test('rejects malformed currency codes', () {
+    test('rejects unknown or malformed currency codes', () {
       expect(FundValidation.currencyError('US'), isNotNull);
       expect(FundValidation.currencyError('USDD'), isNotNull);
+      expect(FundValidation.currencyError('ZZZ'), isNotNull);
       expect(FundValidation.currencyError(r'12$'), isNotNull);
       expect(FundValidation.currencyError(''), isNotNull);
     });
