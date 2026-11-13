@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../auth/auth_controller.dart';
 import '../repositories/entry_repository.dart';
 import '../repositories/fund_repository.dart';
+import '../repositories/membership_repository.dart';
 import 'sign_in_page.dart';
 import 'signed_in_page.dart';
 
@@ -13,11 +14,13 @@ class AuthGate extends StatelessWidget {
     required this.auth,
     required this.fundRepository,
     required this.entryRepository,
+    required this.membershipRepository,
   });
 
   final AuthController auth;
   final FundRepository fundRepository;
   final EntryRepository entryRepository;
+  final MembershipRepository membershipRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +34,7 @@ class AuthGate extends StatelessWidget {
           auth: auth,
           fundRepository: fundRepository,
           entryRepository: entryRepository,
+          membershipRepository: membershipRepository,
         );
       },
     );

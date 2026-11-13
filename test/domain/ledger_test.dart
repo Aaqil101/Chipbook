@@ -71,6 +71,31 @@ void main() {
       expect(summary.totalMinor, 5000);
     });
 
+    test('tracks which entries already have a reversal', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'a', amountMinor: 5000),
+        _entry(id: 'b', amountMinor: 3000),
+        _entry(id: 'r', amountMinor: 5000, reversesEntryId: 'a'),
+      ], currency: 'USD');
+
+      expect(summary.reversedEntryIds, {'a'});
+      expect(summary.canReverse(_find(summary.approved, 'a')), isFalse);
+      expect(summary.canReverse(_find(summary.approved, 'b')), isTrue);
+      expect(summary.canReverse(_find(summary.approved, 'r')), isFalse);
+    });
+
+    test('only approved, unreversed, normal entries can be reversed', () {
+      final summary = LedgerSummary.from([
+        _entry(id: 'approved', amountMinor: 5000),
+        _entry(id: 'pending', amountMinor: 5000, status: EntryStatus.pending),
+        _entry(id: 'reversal', amountMinor: 5000, reversesEntryId: 'approved'),
+      ], currency: 'USD');
+
+      expect(summary.canReverse(_find(summary.approved, 'approved')), isFalse);
+      expect(summary.canReverse(summary.pending.single), isFalse);
+      expect(summary.canReverse(_find(summary.approved, 'reversal')), isFalse);
+    });
+
     test('sorts approved and pending entries newest first', () {
       final summary = LedgerSummary.from([
         _entry(id: 'old', amountMinor: 1000, createdAt: DateTime(2026, 1, 1)),
@@ -91,6 +116,10 @@ void main() {
       );
     });
   });
+}
+
+Entry _find(List<Entry> entries, String id) {
+  return entries.firstWhere((entry) => entry.id == id);
 }
 
 Entry _entry({

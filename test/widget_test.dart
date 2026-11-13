@@ -8,8 +8,11 @@ import 'package:chipbook/auth/auth_service.dart';
 import 'package:chipbook/main.dart';
 import 'package:chipbook/models/entry.dart';
 import 'package:chipbook/models/fund.dart';
+import 'package:chipbook/models/member_role.dart';
+import 'package:chipbook/models/membership.dart';
 import 'package:chipbook/repositories/entry_repository.dart';
 import 'package:chipbook/repositories/fund_repository.dart';
+import 'package:chipbook/repositories/membership_repository.dart';
 
 void main() {
   testWidgets('signed-out users see the sign-in screen', (tester) async {
@@ -23,6 +26,7 @@ void main() {
         auth: auth,
         fundRepository: FakeFundRepository(),
         entryRepository: InMemoryEntryRepository(),
+        membershipRepository: FakeMembershipRepository(),
       ),
     );
 
@@ -70,6 +74,7 @@ void main() {
         auth: auth,
         fundRepository: FakeFundRepository(),
         entryRepository: InMemoryEntryRepository(),
+        membershipRepository: FakeMembershipRepository(),
       ),
     );
 
@@ -101,7 +106,129 @@ void main() {
     expect(find.text('USD 0.00'), findsOneWidget);
   });
 
-  testWidgets('switching funds reloads the ledger', (tester) async {
+  testWidgets('organizers can approve a pending entry', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(_entry(id: 'pending', amountMinor: 1250));
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('USD 0.00'), findsOneWidget);
+
+    await tester.tap(find.text('Approve'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Pending'), findsNothing);
+    expect(find.text('USD 12.50'), findsNWidgets(2));
+  });
+
+  testWidgets('members see no approve or reverse controls', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(_entry(id: 'pending', amountMinor: 1250));
+    await entries.add(
+      _entry(id: 'approved', amountMinor: 5000, status: EntryStatus.approved),
+    );
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+      role: MemberRole.member,
+    );
+
+    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Reverse'), findsNothing);
+    expect(find.text('Add entry'), findsOneWidget);
+  });
+
+  testWidgets('observers can read the ledger but not add or approve', (
+    tester,
+  ) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(_entry(id: 'pending', amountMinor: 1250));
+    await entries.add(
+      _entry(id: 'approved', amountMinor: 5000, status: EntryStatus.approved),
+    );
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+      role: MemberRole.observer,
+    );
+
+    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Reverse'), findsNothing);
+    expect(find.text('Add entry'), findsNothing);
+    expect(find.text('USD 50.00'), findsNWidgets(2));
+  });
+
+  testWidgets('reversing an approved entry records a reason', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(
+        id: 'approved',
+        amountMinor: 5000,
+        status: EntryStatus.approved,
+        note: 'Original note',
+      ),
+    );
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    await tester.tap(find.text('Reverse'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reverse entry'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AlertDialog), matching: find.text('Ada')),
+      findsOneWidget,
+    );
+    expect(find.text('USD 50.00'), findsWidgets);
+
+    await tester.enterText(find.byType(TextFormField), 'Recorded twice');
+    await tester.tap(find.text('Record reversal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reversal'), findsOneWidget);
+    expect(find.text('Reversed'), findsOneWidget);
+    expect(find.textContaining('Recorded twice'), findsOneWidget);
+    expect(find.text('USD 50.00'), findsOneWidget);
+    expect(find.text('-USD 50.00'), findsOneWidget);
+    expect(find.text('USD 0.00'), findsOneWidget);
+  });
+
+  testWidgets('a reversal cannot be recorded without a reason', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(id: 'approved', amountMinor: 5000, status: EntryStatus.approved),
+    );
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      entries: entries,
+    );
+
+    await tester.tap(find.text('Reverse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Record reversal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter a reason for the reversal'), findsOneWidget);
+    expect(find.text('Reverse entry'), findsOneWidget);
+  });
+
+  testWidgets('switching funds reloads the ledger and role', (tester) async {
     final entries = InMemoryEntryRepository();
     await entries.add(
       Entry(
@@ -131,6 +258,7 @@ void main() {
     expect(find.text('Gift fund'), findsOneWidget);
     expect(find.text('Grace'), findsOneWidget);
     expect(find.text('USD 50.00'), findsNWidgets(2));
+    expect(find.text('Reverse'), findsOneWidget);
   });
 
   testWidgets('signing out returns to the sign-in screen', (tester) async {
@@ -147,6 +275,7 @@ Future<void> _pumpSignedIn(
   WidgetTester tester, {
   List<Fund> funds = const [],
   InMemoryEntryRepository? entries,
+  MemberRole role = MemberRole.organizer,
 }) async {
   final fake = FakeAuthService(signedIn: true);
   final auth = AuthController(fake);
@@ -158,6 +287,7 @@ Future<void> _pumpSignedIn(
       auth: auth,
       fundRepository: FakeFundRepository(funds: funds),
       entryRepository: entries ?? InMemoryEntryRepository(),
+      membershipRepository: FakeMembershipRepository(role: role),
     ),
   );
   await tester.pumpAndSettle();
@@ -173,6 +303,24 @@ Fund _fund(String id, String name) {
   );
 }
 
+Entry _entry({
+  required String id,
+  required int amountMinor,
+  EntryStatus status = EntryStatus.pending,
+  String note = '',
+}) {
+  return Entry(
+    id: id,
+    fundId: 'fund-a',
+    amountMinor: amountMinor,
+    currency: 'USD',
+    contributorName: 'Ada',
+    note: note,
+    createdAt: DateTime(2026, 1, 1),
+    status: status,
+  );
+}
+
 class FakeAuthService implements AuthService {
   FakeAuthService({bool signedIn = false}) : _isSignedIn = signedIn;
 
@@ -182,6 +330,9 @@ class FakeAuthService implements AuthService {
 
   @override
   bool get isSignedIn => _isSignedIn;
+
+  @override
+  String? get userId => _isSignedIn ? 'user-1' : null;
 
   @override
   String? get email => _isSignedIn ? 'ada@example.com' : null;
@@ -226,5 +377,40 @@ class FakeFundRepository implements FundRepository {
     );
     _funds.add(fund);
     return fund;
+  }
+}
+
+class FakeMembershipRepository implements MembershipRepository {
+  FakeMembershipRepository({this.role = MemberRole.organizer});
+
+  final MemberRole role;
+
+  @override
+  Future<List<Membership>> getMemberships({required String fundId}) async {
+    return [
+      Membership(
+        fundId: fundId,
+        userId: 'user-1',
+        role: role,
+        createdAt: DateTime(2026, 1, 1),
+      ),
+    ];
+  }
+
+  @override
+  Future<void> setRole({
+    required String fundId,
+    required String userId,
+    required MemberRole role,
+  }) async {
+    throw UnsupportedError('setRole is covered by member management');
+  }
+
+  @override
+  Future<void> removeMember({
+    required String fundId,
+    required String userId,
+  }) async {
+    throw UnsupportedError('removeMember is covered by member management');
   }
 }

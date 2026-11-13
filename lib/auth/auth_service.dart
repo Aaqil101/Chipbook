@@ -4,6 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 abstract interface class AuthService {
   bool get isSignedIn;
 
+  /// Supabase user id, or null when signed out.
+  String? get userId;
+
   String? get email;
 
   /// Emits whenever the signed-in state changes.
@@ -22,6 +25,9 @@ class SupabaseAuthService implements AuthService {
 
   @override
   bool get isSignedIn => _client.auth.currentSession != null;
+
+  @override
+  String? get userId => _client.auth.currentUser?.id;
 
   @override
   String? get email => _client.auth.currentUser?.email;

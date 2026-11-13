@@ -16,6 +16,8 @@ class AuthController extends ChangeNotifier {
 
   bool get isSignedIn => _isSignedIn;
 
+  String? get userId => _service.userId;
+
   String? get email => _service.email;
 
   Future<void> sendMagicLink(String email) => _service.sendMagicLink(email);

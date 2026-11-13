@@ -1,11 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../domain/fund_permissions.dart';
 import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../models/entry.dart';
 import '../models/fund.dart';
 import '../state/ledger_controller.dart';
 import 'add_entry_page.dart';
+import 'reverse_entry_dialog.dart';
 
 const _newFundAction = '__new_fund__';
 
@@ -15,6 +17,7 @@ class EntriesPage extends StatelessWidget {
     super.key,
     required this.controller,
     required this.fundName,
+    this.permissions,
     this.funds = const <Fund>[],
     this.onSelectFund,
     this.onCreateFund,
@@ -23,6 +26,10 @@ class EntriesPage extends StatelessWidget {
 
   final LedgerController controller;
   final String fundName;
+
+  /// The signed-in user's role in this fund, or null until it is known.
+  final FundPermissions? permissions;
+
   final List<Fund> funds;
   final ValueChanged<Fund>? onSelectFund;
   final VoidCallback? onCreateFund;
@@ -83,25 +90,67 @@ class EntriesPage extends StatelessWidget {
                 ),
             ],
           ),
-          body: _buildBody(summary),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _openAddEntry(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Add entry'),
-          ),
+          body: _buildBody(context, summary),
+          floatingActionButton: (permissions?.canAddEntry ?? false)
+              ? FloatingActionButton.extended(
+                  onPressed: () => _openAddEntry(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add entry'),
+                )
+              : null,
         );
       },
     );
   }
 
-  Widget _buildBody(LedgerSummary summary) {
+  Widget _buildBody(BuildContext context, LedgerSummary summary) {
     if (controller.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (summary.isEmpty) {
       return const _EmptyState();
     }
-    return _LedgerList(summary: summary);
+    return _LedgerList(
+      summary: summary,
+      permissions: permissions,
+      onApprove: (entry) => _approve(context, entry),
+      onReverse: (entry) => _reverse(context, entry),
+    );
+  }
+
+  Future<void> _approve(BuildContext context, Entry entry) async {
+    try {
+      await controller.approve(entry.id);
+    } on Object catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      _showError(context, error);
+    }
+  }
+
+  Future<void> _reverse(BuildContext context, Entry entry) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (_) => ReverseEntryDialog(entry: entry),
+    );
+    if (reason == null) {
+      return;
+    }
+
+    try {
+      await controller.reverse(target: entry, reason: reason);
+    } on Object catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      _showError(context, error);
+    }
+  }
+
+  void _showError(BuildContext context, Object error) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(error.toString())));
   }
 
   Future<void> _openAddEntry(BuildContext context) {
@@ -127,13 +176,23 @@ class EntriesPage extends StatelessWidget {
 }
 
 class _LedgerList extends StatelessWidget {
-  const _LedgerList({required this.summary});
+  const _LedgerList({
+    required this.summary,
+    required this.permissions,
+    required this.onApprove,
+    required this.onReverse,
+  });
 
   final LedgerSummary summary;
+  final FundPermissions? permissions;
+  final ValueChanged<Entry> onApprove;
+  final ValueChanged<Entry> onReverse;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final canApprove = permissions?.canApprove ?? false;
+    final canReverse = permissions?.canReverse ?? false;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -143,7 +202,11 @@ class _LedgerList extends StatelessWidget {
         if (summary.pending.isNotEmpty) ...[
           _SectionHeader(title: 'Pending', count: summary.pending.length),
           const SizedBox(height: 8),
-          for (final entry in summary.pending) _EntryTile(entry: entry),
+          for (final entry in summary.pending)
+            _EntryTile(
+              entry: entry,
+              onApprove: canApprove ? () => onApprove(entry) : null,
+            ),
           const SizedBox(height: 24),
         ],
         _SectionHeader(title: 'Approved', count: summary.approved.length),
@@ -157,7 +220,14 @@ class _LedgerList extends StatelessWidget {
             ),
           )
         else
-          for (final entry in summary.approved) _EntryTile(entry: entry),
+          for (final entry in summary.approved)
+            _EntryTile(
+              entry: entry,
+              isReversed: summary.reversedEntryIds.contains(entry.id),
+              onReverse: canReverse && summary.canReverse(entry)
+                  ? () => onReverse(entry)
+                  : null,
+            ),
       ],
     );
   }
@@ -231,9 +301,20 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _EntryTile extends StatelessWidget {
-  const _EntryTile({required this.entry});
+  const _EntryTile({
+    required this.entry,
+    this.isReversed = false,
+    this.onApprove,
+    this.onReverse,
+  });
 
   final Entry entry;
+
+  /// Whether a reversal already points at this entry.
+  final bool isReversed;
+
+  final VoidCallback? onApprove;
+  final VoidCallback? onReverse;
 
   @override
   Widget build(BuildContext context) {
@@ -241,35 +322,71 @@ class _EntryTile extends StatelessWidget {
     final date = MaterialLocalizations.of(context)
         .formatShortDate(entry.createdAt.toLocal());
     final note = entry.note.trim();
+    final hasActions = onApprove != null || onReverse != null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(child: Text(_initial(entry.contributorName))),
-        title: Text(entry.contributorName),
-        subtitle: Text([if (note.isNotEmpty) note, date].join(' · ')),
-        isThreeLine: note.isNotEmpty,
-        trailing: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              Money.format(entry.signedAmountMinor, currency: entry.currency),
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: entry.isReversal ? theme.colorScheme.error : null,
-                fontWeight: FontWeight.w600,
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(child: Text(_initial(entry.contributorName))),
+            title: Text(entry.contributorName),
+            subtitle: Text([if (note.isNotEmpty) note, date].join(' · ')),
+            isThreeLine: note.isNotEmpty,
+            trailing: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  Money.format(
+                    entry.signedAmountMinor,
+                    currency: entry.currency,
+                  ),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: entry.isReversal ? theme.colorScheme.error : null,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (entry.isReversal)
+                  Text(
+                    'Reversal',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  )
+                else if (isReversed)
+                  Text(
+                    'Reversed',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (hasActions)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (onApprove != null)
+                    TextButton.icon(
+                      onPressed: onApprove,
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Approve'),
+                    ),
+                  if (onReverse != null)
+                    TextButton.icon(
+                      onPressed: onReverse,
+                      icon: const Icon(Icons.undo, size: 18),
+                      label: const Text('Reverse'),
+                    ),
+                ],
               ),
             ),
-            if (entry.isReversal)
-              Text(
-                'Reversal',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }

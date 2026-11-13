@@ -7,6 +7,7 @@ import '../auth/auth_controller.dart';
 import '../models/fund.dart';
 import '../repositories/entry_repository.dart';
 import '../repositories/fund_repository.dart';
+import '../repositories/membership_repository.dart';
 import '../state/fund_controller.dart';
 import 'create_fund_dialog.dart';
 import 'entries_page.dart';
@@ -18,11 +19,13 @@ class SignedInPage extends StatefulWidget {
     required this.auth,
     required this.fundRepository,
     required this.entryRepository,
+    required this.membershipRepository,
   });
 
   final AuthController auth;
   final FundRepository fundRepository;
   final EntryRepository entryRepository;
+  final MembershipRepository membershipRepository;
 
   @override
   State<SignedInPage> createState() => _SignedInPageState();
@@ -34,7 +37,12 @@ class _SignedInPageState extends State<SignedInPage> {
   @override
   void initState() {
     super.initState();
-    _funds = FundController(widget.fundRepository, widget.entryRepository);
+    _funds = FundController(
+      widget.fundRepository,
+      widget.entryRepository,
+      widget.membershipRepository,
+      userId: widget.auth.userId,
+    );
     unawaited(_funds.load());
   }
 
@@ -54,7 +62,7 @@ class _SignedInPageState extends State<SignedInPage> {
         }
 
         final error = _funds.error;
-        if (error != null && _funds.funds.isEmpty) {
+        if (error != null) {
           return _FundsErrorPage(
             message: error,
             onRetry: () => unawaited(_funds.load()),
@@ -74,6 +82,7 @@ class _SignedInPageState extends State<SignedInPage> {
         return EntriesPage(
           controller: ledger,
           fundName: fund.name,
+          permissions: _funds.permissions,
           funds: _funds.funds,
           onSelectFund: (fund) => unawaited(_selectFund(fund)),
           onCreateFund: () => unawaited(_createFund()),

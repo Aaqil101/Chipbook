@@ -10,6 +10,7 @@ class LedgerSummary {
     required this.currency,
     required this.approved,
     required this.pending,
+    required this.reversedEntryIds,
   });
 
   /// Builds a summary from [entries].
@@ -23,8 +24,14 @@ class LedgerSummary {
   }) {
     final approved = <Entry>[];
     final pending = <Entry>[];
+    final reversedEntryIds = <String>{};
 
     for (final entry in entries) {
+      final targetId = entry.reversesEntryId;
+      if (targetId != null) {
+        reversedEntryIds.add(targetId);
+      }
+
       if (entry.isApproved) {
         approved.add(entry);
       } else {
@@ -51,6 +58,7 @@ class LedgerSummary {
       currency: currency,
       approved: List<Entry>.unmodifiable(approved),
       pending: List<Entry>.unmodifiable(pending),
+      reversedEntryIds: Set<String>.unmodifiable(reversedEntryIds),
     );
   }
 
@@ -66,7 +74,20 @@ class LedgerSummary {
   /// Pending entries, newest first. They never affect [totalMinor].
   final List<Entry> pending;
 
+  /// Ids of entries that already have a reversal.
+  final Set<String> reversedEntryIds;
+
   bool get isEmpty => approved.isEmpty && pending.isEmpty;
+
+  /// Whether [entry] may be corrected with a new reversal entry.
+  ///
+  /// Only approved, non-reversal entries qualify, and each entry can be
+  /// reversed once. The database enforces the same rules.
+  bool canReverse(Entry entry) {
+    return entry.isApproved &&
+        !entry.isReversal &&
+        !reversedEntryIds.contains(entry.id);
+  }
 
   static void _sortNewestFirst(List<Entry> entries) {
     entries.sort((a, b) {

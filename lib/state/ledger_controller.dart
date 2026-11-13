@@ -82,6 +82,37 @@ class LedgerController extends ChangeNotifier {
     await _reload();
   }
 
+  /// Records a new approved entry that reverses [target].
+  ///
+  /// Reversals carry the original amount and contributor, so the total drops
+  /// by exactly the reversed amount. The original entry is never changed.
+  Future<Entry> reverse({required Entry target, required String reason}) async {
+    final note = reason.trim();
+    if (note.isEmpty) {
+      throw ArgumentError.value(reason, 'reason', 'a reason is required');
+    }
+    if (target.fundId != fundId) {
+      throw ArgumentError.value(target.id, 'target', 'belongs to another fund');
+    }
+    if (!target.isApproved) {
+      throw ArgumentError.value(target.id, 'target', 'must be approved');
+    }
+    if (target.isReversal) {
+      throw ArgumentError.value(target.id, 'target', 'is already a reversal');
+    }
+    if (_entries.any((entry) => entry.reversesEntryId == target.id)) {
+      throw ArgumentError.value(target.id, 'target', 'is already reversed');
+    }
+
+    return addEntry(
+      amountMinor: target.amountMinor,
+      contributorName: target.contributorName,
+      note: note,
+      status: EntryStatus.approved,
+      reversesEntryId: target.id,
+    );
+  }
+
   Future<void> _reload() async {
     _entries = await _repository.getAll(fundId: fundId);
     _summary = null;

@@ -22,4 +22,9 @@ abstract final class EntryValidation {
   static String? contributorError(String raw) {
     return raw.trim().isEmpty ? 'Name is required' : null;
   }
+
+  /// A reversal must explain why the original entry is being corrected.
+  static String? reversalReasonError(String raw) {
+    return raw.trim().isEmpty ? 'Enter a reason for the reversal' : null;
+  }
 }
