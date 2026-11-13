@@ -25,11 +25,17 @@ Future<void> main() async {
   );
 
   final auth = AuthController(SupabaseAuthService(Supabase.instance.client));
-  final ledger = LedgerController(InMemoryEntryRepository());
+  final ledger = LedgerController(
+    InMemoryEntryRepository(),
+    fundId: _localFundId,
+  );
   unawaited(ledger.load());
 
   runApp(ChipbookApp(auth: auth, ledger: ledger));
 }
+
+// Temporary scope until fund selection lands; entries stay local for now.
+const _localFundId = 'local-fund';
 
 class ChipbookApp extends StatelessWidget {
   const ChipbookApp({super.key, required this.auth, required this.ledger});

@@ -8,6 +8,7 @@ enum EntryStatus { pending, approved }
 class Entry {
   const Entry({
     required this.id,
+    required this.fundId,
     required this.amountMinor,
     required this.currency,
     required this.contributorName,
@@ -19,6 +20,9 @@ class Entry {
 
   /// Stable identifier used by reversal entries.
   final String id;
+
+  /// Fund this entry belongs to.
+  final String fundId;
 
   /// Amount in the smallest currency unit (for example, cents).
   ///
@@ -51,4 +55,19 @@ class Entry {
   ///
   /// Callers must still ignore entries that are not approved.
   int get signedAmountMinor => isReversal ? -amountMinor : amountMinor;
+
+  /// Returns a copy with a new [status], used only for approval.
+  Entry copyWith({EntryStatus? status}) {
+    return Entry(
+      id: id,
+      fundId: fundId,
+      amountMinor: amountMinor,
+      currency: currency,
+      contributorName: contributorName,
+      note: note,
+      createdAt: createdAt,
+      status: status ?? this.status,
+      reversesEntryId: reversesEntryId,
+    );
+  }
 }

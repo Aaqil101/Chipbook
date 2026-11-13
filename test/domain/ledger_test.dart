@@ -102,6 +102,7 @@ Entry _entry({
 }) {
   return Entry(
     id: id,
+    fundId: 'fund-a',
     amountMinor: amountMinor,
     currency: 'USD',
     contributorName: 'Ada',

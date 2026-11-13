@@ -17,7 +17,10 @@ void main() {
     addTearDown(fake.dispose);
     addTearDown(auth.dispose);
 
-    final ledger = LedgerController(InMemoryEntryRepository());
+    final ledger = LedgerController(
+      InMemoryEntryRepository(),
+      fundId: 'fund-a',
+    );
     await ledger.load();
     addTearDown(ledger.dispose);
 
@@ -33,7 +36,10 @@ void main() {
     addTearDown(fake.dispose);
     addTearDown(auth.dispose);
 
-    final ledger = LedgerController(InMemoryEntryRepository());
+    final ledger = LedgerController(
+      InMemoryEntryRepository(),
+      fundId: 'fund-a',
+    );
     await ledger.load();
     addTearDown(ledger.dispose);
 
@@ -50,7 +56,10 @@ void main() {
     addTearDown(fake.dispose);
     addTearDown(auth.dispose);
 
-    final ledger = LedgerController(InMemoryEntryRepository());
+    final ledger = LedgerController(
+      InMemoryEntryRepository(),
+      fundId: 'fund-a',
+    );
     await ledger.load();
     addTearDown(ledger.dispose);
 
@@ -72,7 +81,10 @@ void main() {
     addTearDown(fake.dispose);
     addTearDown(auth.dispose);
 
-    final ledger = LedgerController(InMemoryEntryRepository());
+    final ledger = LedgerController(
+      InMemoryEntryRepository(),
+      fundId: 'fund-a',
+    );
     await ledger.load();
     addTearDown(ledger.dispose);
 
@@ -99,7 +111,10 @@ void main() {
     addTearDown(fake.dispose);
     addTearDown(auth.dispose);
 
-    final ledger = LedgerController(InMemoryEntryRepository());
+    final ledger = LedgerController(
+      InMemoryEntryRepository(),
+      fundId: 'fund-a',
+    );
     await ledger.load();
     addTearDown(ledger.dispose);
 

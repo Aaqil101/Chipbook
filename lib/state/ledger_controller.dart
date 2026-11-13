@@ -1,20 +1,26 @@
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../config.dart';
 import '../domain/ledger.dart';
 import '../models/entry.dart';
 import '../repositories/entry_repository.dart';
 
-/// Coordinates ledger reads and appends, and exposes the result to widgets.
+/// Coordinates ledger reads and appends for a single fund.
 class LedgerController extends ChangeNotifier {
   LedgerController(
     this._repository, {
+    required this.fundId,
     this.currency = AppConfig.defaultCurrency,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
 
   final EntryRepository _repository;
   final DateTime Function() _clock;
+  final Uuid _uuid = const Uuid();
+
+  /// Fund whose entries this controller manages.
+  final String fundId;
 
   /// ISO 4217 code assigned to new entries and used for display.
   final String currency;
@@ -22,7 +28,6 @@ class LedgerController extends ChangeNotifier {
   List<Entry> _entries = const <Entry>[];
   LedgerSummary? _summary;
   bool _isLoading = false;
-  int _sequence = 0;
 
   /// Every entry in repository (append) order.
   List<Entry> get entries => _entries;
@@ -33,12 +38,12 @@ class LedgerController extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
 
-  /// Loads all entries from the repository.
+  /// Loads all entries for [fundId] from the repository.
   Future<void> load() async {
     _isLoading = true;
     notifyListeners();
     try {
-      _entries = await _repository.getAll();
+      _entries = await _repository.getAll(fundId: fundId);
       _summary = null;
     } finally {
       _isLoading = false;
@@ -54,22 +59,32 @@ class LedgerController extends ChangeNotifier {
     EntryStatus status = EntryStatus.pending,
     String? reversesEntryId,
   }) async {
-    final createdAt = _clock();
     final entry = Entry(
-      id: '${createdAt.microsecondsSinceEpoch}-${_sequence++}',
+      id: _uuid.v4(),
+      fundId: fundId,
       amountMinor: amountMinor,
       currency: currency,
       contributorName: contributorName.trim(),
       note: note.trim(),
-      createdAt: createdAt,
+      createdAt: _clock(),
       status: status,
       reversesEntryId: reversesEntryId,
     );
 
     await _repository.add(entry);
-    _entries = await _repository.getAll();
+    await _reload();
+    return entry;
+  }
+
+  /// Approves a pending entry. Organizers only, enforced by the backend.
+  Future<void> approve(String entryId) async {
+    await _repository.approve(fundId: fundId, entryId: entryId);
+    await _reload();
+  }
+
+  Future<void> _reload() async {
+    _entries = await _repository.getAll(fundId: fundId);
     _summary = null;
     notifyListeners();
-    return entry;
   }
 }
