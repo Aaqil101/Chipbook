@@ -6,9 +6,11 @@ import 'auth/auth_controller.dart';
 import 'auth/auth_service.dart';
 import 'repositories/entry_repository.dart';
 import 'repositories/fund_repository.dart';
+import 'repositories/invite_repository.dart';
 import 'repositories/membership_repository.dart';
 import 'repositories/supabase_entry_repository.dart';
 import 'repositories/supabase_fund_repository.dart';
+import 'repositories/supabase_invite_repository.dart';
 import 'repositories/supabase_membership_repository.dart';
 import 'screens/auth_gate.dart';
 import 'supabase_config.dart';
@@ -34,6 +36,7 @@ Future<void> main() async {
       fundRepository: SupabaseFundRepository(client),
       entryRepository: SupabaseEntryRepository(client),
       membershipRepository: SupabaseMembershipRepository(client),
+      inviteRepository: SupabaseInviteRepository(client),
     ),
   );
 }
@@ -45,12 +48,14 @@ class ChipbookApp extends StatelessWidget {
     required this.fundRepository,
     required this.entryRepository,
     required this.membershipRepository,
+    required this.inviteRepository,
   });
 
   final AuthController auth;
   final FundRepository fundRepository;
   final EntryRepository entryRepository;
   final MembershipRepository membershipRepository;
+  final InviteRepository inviteRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +67,7 @@ class ChipbookApp extends StatelessWidget {
         fundRepository: fundRepository,
         entryRepository: entryRepository,
         membershipRepository: membershipRepository,
+        inviteRepository: inviteRepository,
       ),
     );
   }

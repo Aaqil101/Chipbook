@@ -10,6 +10,7 @@ import 'add_entry_page.dart';
 import 'reverse_entry_dialog.dart';
 
 const _newFundAction = '__new_fund__';
+const _redeemInviteAction = '__redeem_invite__';
 
 /// Shows the running total, approved entries, and pending entries.
 class EntriesPage extends StatelessWidget {
@@ -21,6 +22,8 @@ class EntriesPage extends StatelessWidget {
     this.funds = const <Fund>[],
     this.onSelectFund,
     this.onCreateFund,
+    this.onRedeemInvite,
+    this.onOpenMembers,
     this.onSignOut,
   });
 
@@ -33,6 +36,8 @@ class EntriesPage extends StatelessWidget {
   final List<Fund> funds;
   final ValueChanged<Fund>? onSelectFund;
   final VoidCallback? onCreateFund;
+  final VoidCallback? onRedeemInvite;
+  final VoidCallback? onOpenMembers;
   final Future<void> Function()? onSignOut;
 
   @override
@@ -47,6 +52,12 @@ class EntriesPage extends StatelessWidget {
           appBar: AppBar(
             title: Text(fundName, overflow: TextOverflow.ellipsis),
             actions: [
+              if (onOpenMembers != null)
+                IconButton(
+                  onPressed: onOpenMembers,
+                  tooltip: 'Members',
+                  icon: const Icon(Icons.group_outlined),
+                ),
               if (funds.isNotEmpty &&
                   (onSelectFund != null || onCreateFund != null))
                 PopupMenuButton<String>(
@@ -76,6 +87,11 @@ class EntriesPage extends StatelessWidget {
                         ),
                       ),
                     const PopupMenuDivider(),
+                    if (onRedeemInvite != null)
+                      const PopupMenuItem<String>(
+                        value: _redeemInviteAction,
+                        child: Text('Redeem invite'),
+                      ),
                     const PopupMenuItem<String>(
                       value: _newFundAction,
                       child: Text('New fund'),
@@ -164,6 +180,10 @@ class EntriesPage extends StatelessWidget {
   void _handleFundSelection(String value) {
     if (value == _newFundAction) {
       onCreateFund?.call();
+      return;
+    }
+    if (value == _redeemInviteAction) {
+      onRedeemInvite?.call();
       return;
     }
     for (final fund in funds) {

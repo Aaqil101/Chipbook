@@ -7,10 +7,13 @@ import '../auth/auth_controller.dart';
 import '../models/fund.dart';
 import '../repositories/entry_repository.dart';
 import '../repositories/fund_repository.dart';
+import '../repositories/invite_repository.dart';
 import '../repositories/membership_repository.dart';
 import '../state/fund_controller.dart';
 import 'create_fund_dialog.dart';
 import 'entries_page.dart';
+import 'members_page.dart';
+import 'redeem_invite_dialog.dart';
 
 /// Signed-in shell: loads funds and shows the active fund's ledger.
 class SignedInPage extends StatefulWidget {
@@ -20,12 +23,14 @@ class SignedInPage extends StatefulWidget {
     required this.fundRepository,
     required this.entryRepository,
     required this.membershipRepository,
+    required this.inviteRepository,
   });
 
   final AuthController auth;
   final FundRepository fundRepository;
   final EntryRepository entryRepository;
   final MembershipRepository membershipRepository;
+  final InviteRepository inviteRepository;
 
   @override
   State<SignedInPage> createState() => _SignedInPageState();
@@ -75,17 +80,23 @@ class _SignedInPageState extends State<SignedInPage> {
         if (fund == null || ledger == null) {
           return _NoFundsPage(
             onCreateFund: () => unawaited(_createFund()),
+            onRedeemInvite: () => unawaited(_redeemInvite()),
             onSignOut: widget.auth.signOut,
           );
         }
 
+        final permissions = _funds.permissions;
         return EntriesPage(
           controller: ledger,
           fundName: fund.name,
-          permissions: _funds.permissions,
+          permissions: permissions,
           funds: _funds.funds,
           onSelectFund: (fund) => unawaited(_selectFund(fund)),
           onCreateFund: () => unawaited(_createFund()),
+          onRedeemInvite: () => unawaited(_redeemInvite()),
+          onOpenMembers: permissions == null
+              ? null
+              : () => unawaited(_openMembers(fund)),
           onSignOut: widget.auth.signOut,
         );
       },
@@ -124,6 +135,61 @@ class _SignedInPageState extends State<SignedInPage> {
       }
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _openMembers(Fund fund) async {
+    final permissions = _funds.permissions;
+    if (permissions == null) {
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => MembersPage(
+          fundId: fund.id,
+          fundName: fund.name,
+          currentUserId: widget.auth.userId,
+          permissions: permissions,
+          membershipRepository: widget.membershipRepository,
+          inviteRepository: widget.inviteRepository,
+        ),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    // The user's own role, or their access, may have changed.
+    await _funds.load(preferFundId: fund.id);
+  }
+
+  Future<void> _redeemInvite() async {
+    final token = await showDialog<String>(
+      context: context,
+      builder: (_) => const RedeemInviteDialog(),
+    );
+    if (token == null || !mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final fundId = await widget.inviteRepository.acceptInvite(token: token);
+      if (!mounted) {
+        return;
+      }
+      await _funds.load(preferFundId: fundId);
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(const SnackBar(content: Text('Invite accepted')));
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 }
@@ -195,9 +261,14 @@ class _FundsErrorPage extends StatelessWidget {
 }
 
 class _NoFundsPage extends StatelessWidget {
-  const _NoFundsPage({required this.onCreateFund, required this.onSignOut});
+  const _NoFundsPage({
+    required this.onCreateFund,
+    required this.onRedeemInvite,
+    required this.onSignOut,
+  });
 
   final VoidCallback onCreateFund;
+  final VoidCallback onRedeemInvite;
   final Future<void> Function() onSignOut;
 
   @override
@@ -224,7 +295,8 @@ class _NoFundsPage extends StatelessWidget {
               Text('No funds yet', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
-                'Create a fund to start a shared ledger.',
+                'Create a fund to start a shared ledger, '
+                'or join one with an invite.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium,
               ),
@@ -233,6 +305,12 @@ class _NoFundsPage extends StatelessWidget {
                 onPressed: onCreateFund,
                 icon: const Icon(Icons.add),
                 label: const Text('Create a fund'),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: onRedeemInvite,
+                icon: const Icon(Icons.mail_outline),
+                label: const Text('Redeem an invite'),
               ),
             ],
           ),

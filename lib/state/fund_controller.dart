@@ -45,15 +45,23 @@ class FundController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// Loads the funds the current user can access and selects the first.
-  Future<void> load() async {
+  /// Loads the funds the current user can access.
+  ///
+  /// Selects [preferFundId] when it is present, otherwise the first fund.
+  Future<void> load({String? preferFundId}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       _funds = await _fundRepository.getFunds();
-      await _activate(_funds.isEmpty ? null : _funds.first);
+      final preferredIndex = _funds.indexWhere(
+        (fund) => fund.id == preferFundId,
+      );
+      final selected = _funds.isEmpty
+          ? null
+          : _funds[preferredIndex == -1 ? 0 : preferredIndex];
+      await _activate(selected);
     } on Object catch (error) {
       _error = error.toString();
     } finally {

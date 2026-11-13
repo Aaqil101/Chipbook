@@ -16,12 +16,16 @@ class SupabaseMembershipRepository implements MembershipRepository {
   @override
   Future<List<Membership>> getMemberships({required String fundId}) async {
     try {
-      final rows = await _client
-          .from('memberships')
-          .select()
-          .eq('fund_id', fundId)
-          .order('created_at');
-      return rows.map(_membershipFromRow).toList();
+      final rows = await _client.rpc<dynamic>(
+        'list_fund_members',
+        params: {'target_fund_id': fundId},
+      );
+      if (rows is! List) {
+        throw const RepositoryException('Could not load members.');
+      }
+      return rows.cast<Map<String, dynamic>>().map(_membershipFromRow).toList();
+    } on RepositoryException {
+      rethrow;
     } on Object catch (error) {
       throw supabaseFailure('Could not load members', error);
     }
@@ -78,6 +82,7 @@ class SupabaseMembershipRepository implements MembershipRepository {
       userId: row['user_id'] as String,
       role: MemberRole.fromCode(row['role'] as String),
       createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
+      email: row['email'] as String?,
     );
   }
 }
