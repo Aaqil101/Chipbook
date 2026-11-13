@@ -1159,6 +1159,60 @@ select pg_temp.assert_raises_message(
   'membership keys are immutable'
 );
 
+-- ---------------------------------------------------------------------------
+-- Fund creation with RETURNING.
+--
+-- The app inserts with RETURNING to read the new fund. The returned row is
+-- checked against the SELECT policy before the AFTER INSERT trigger adds the
+-- creator's membership, which is why the policy also admits the creator.
+-- ---------------------------------------------------------------------------
+
+reset role;
+
+insert into auth.users (id, email) values
+  ('66666666-6666-4666-8666-666666666666', 'creator@example.com')
+on conflict (id) do nothing;
+
+select set_config(
+  'request.jwt.claim.sub',
+  '66666666-6666-4666-8666-666666666666',
+  true
+);
+set local role authenticated;
+
+create temp table returning_fund on commit drop as
+select * from public.funds where false;
+
+with created as (
+  insert into public.funds (name, default_currency)
+  values ('Returning fund', 'USD')
+  returning *
+)
+insert into returning_fund
+select * from created;
+
+select pg_temp.assert_eq(
+  (select count(*) from returning_fund),
+  1,
+  'a fund insert can return the new row'
+);
+select pg_temp.assert_eq(
+  (select count(*) from public.funds),
+  1,
+  'the creator can read the fund they just made'
+);
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.memberships
+    where fund_id = (select id from returning_fund)
+      and user_id = '66666666-6666-4666-8666-666666666666'
+      and role = 'organizer'
+  ),
+  1,
+  'the fund creator still becomes an organizer'
+);
+
 select 'RLS tests passed' as result;
 
 rollback;
