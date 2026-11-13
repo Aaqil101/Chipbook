@@ -11,6 +11,7 @@ import 'reverse_entry_dialog.dart';
 
 const _newFundAction = '__new_fund__';
 const _redeemInviteAction = '__redeem_invite__';
+const _fundSettingsAction = '__fund_settings__';
 
 /// Shows the running total, approved entries, and pending entries.
 class EntriesPage extends StatelessWidget {
@@ -24,6 +25,7 @@ class EntriesPage extends StatelessWidget {
     this.onCreateFund,
     this.onRedeemInvite,
     this.onOpenMembers,
+    this.onManageFund,
     this.onSignOut,
   });
 
@@ -38,6 +40,9 @@ class EntriesPage extends StatelessWidget {
   final VoidCallback? onCreateFund;
   final VoidCallback? onRedeemInvite;
   final VoidCallback? onOpenMembers;
+
+  /// Opens the archive and delete actions for the active fund.
+  final VoidCallback? onManageFund;
   final Future<void> Function()? onSignOut;
 
   @override
@@ -96,6 +101,13 @@ class EntriesPage extends StatelessWidget {
                       value: _newFundAction,
                       child: Text('New fund'),
                     ),
+                    if (onManageFund != null) ...[
+                      const PopupMenuDivider(),
+                      const PopupMenuItem<String>(
+                        value: _fundSettingsAction,
+                        child: Text('Fund settings'),
+                      ),
+                    ],
                   ],
                 ),
               if (signOut != null)
@@ -184,6 +196,10 @@ class EntriesPage extends StatelessWidget {
     }
     if (value == _redeemInviteAction) {
       onRedeemInvite?.call();
+      return;
+    }
+    if (value == _fundSettingsAction) {
+      onManageFund?.call();
       return;
     }
     for (final fund in funds) {

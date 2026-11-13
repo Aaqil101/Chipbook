@@ -25,13 +25,19 @@ class FundController extends ChangeNotifier {
   final String? userId;
 
   List<Fund> _funds = const <Fund>[];
+  List<Fund> _archivedFunds = const <Fund>[];
   Fund? _activeFund;
   LedgerController? _ledger;
   MemberRole? _role;
   bool _isLoading = true;
   String? _error;
 
+  /// Funds in use, oldest first.
   List<Fund> get funds => _funds;
+
+  /// Funds the user archived, newest first.
+  List<Fund> get archivedFunds => _archivedFunds;
+
   Fund? get activeFund => _activeFund;
   LedgerController? get ledger => _ledger;
 
@@ -54,7 +60,8 @@ class FundController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _funds = await _fundRepository.getFunds();
+      final all = await _fundRepository.getFunds(includeArchived: true);
+      _splitFunds(all);
       final preferredIndex = _funds.indexWhere(
         (fund) => fund.id == preferFundId,
       );
@@ -94,6 +101,46 @@ class FundController extends ChangeNotifier {
 
     await _activate(fund);
     notifyListeners();
+  }
+
+  /// Hides [fund] from the fund list while keeping its ledger.
+  Future<void> archiveFund(Fund fund) async {
+    await _fundRepository.archiveFund(fund.id);
+    await _reloadFunds(preferredId: fund.id);
+  }
+
+  /// Makes an archived [fund] active again.
+  Future<void> restoreFund(Fund fund) async {
+    await _fundRepository.restoreFund(fund.id);
+    await _reloadFunds(preferredId: fund.id);
+  }
+
+  /// Permanently removes [fund], which must have no entries.
+  Future<void> deleteFund(Fund fund) async {
+    await _fundRepository.deleteFund(fund.id);
+    await _reloadFunds(preferredId: fund.id);
+  }
+
+  Future<void> _reloadFunds({String? preferredId}) async {
+    final all = await _fundRepository.getFunds(includeArchived: true);
+    _splitFunds(all);
+    final preferredIndex = _funds.indexWhere((fund) => fund.id == preferredId);
+    final selected = _funds.isEmpty
+        ? null
+        : _funds[preferredIndex == -1 ? 0 : preferredIndex];
+    await _activate(selected);
+    notifyListeners();
+  }
+
+  void _splitFunds(List<Fund> all) {
+    _funds = [
+      for (final fund in all)
+        if (!fund.isArchived) fund,
+    ];
+    _archivedFunds = [
+      for (final fund in all.reversed)
+        if (fund.isArchived) fund,
+    ];
   }
 
   Future<void> _activate(Fund? fund) async {

@@ -6,6 +6,7 @@ class Fund {
     required this.defaultCurrency,
     required this.createdBy,
     required this.createdAt,
+    this.archivedAt,
   });
 
   final String id;
@@ -16,4 +17,12 @@ class Fund {
 
   final String createdBy;
   final DateTime createdAt;
+
+  /// When the fund was archived, or null while it is in use.
+  ///
+  /// Archived funds keep their ledger but accept no new entries and are
+  /// hidden from the active fund list.
+  final DateTime? archivedAt;
+
+  bool get isArchived => archivedAt != null;
 }

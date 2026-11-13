@@ -12,8 +12,10 @@ import '../repositories/membership_repository.dart';
 import '../state/fund_controller.dart';
 import 'create_fund_dialog.dart';
 import 'entries_page.dart';
+import 'fund_settings_sheet.dart';
 import 'members_page.dart';
 import 'redeem_invite_dialog.dart';
+import 'restore_fund_dialog.dart';
 
 /// Signed-in shell: loads funds and shows the active fund's ledger.
 class SignedInPage extends StatefulWidget {
@@ -79,8 +81,10 @@ class _SignedInPageState extends State<SignedInPage> {
         final ledger = _funds.ledger;
         if (fund == null || ledger == null) {
           return _NoFundsPage(
+            archivedFunds: _funds.archivedFunds,
             onCreateFund: () => unawaited(_createFund()),
             onRedeemInvite: () => unawaited(_redeemInvite()),
+            onRestoreArchivedFund: () => unawaited(_restoreArchivedFund()),
             onSignOut: widget.auth.signOut,
           );
         }
@@ -97,6 +101,9 @@ class _SignedInPageState extends State<SignedInPage> {
           onOpenMembers: permissions == null
               ? null
               : () => unawaited(_openMembers(fund)),
+          onManageFund: (permissions?.canManageFund ?? false)
+              ? () => unawaited(_manageFund(fund))
+              : null,
           onSignOut: widget.auth.signOut,
         );
       },
@@ -136,6 +143,109 @@ class _SignedInPageState extends State<SignedInPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.toString())));
     }
+  }
+
+  Future<void> _manageFund(Fund fund) async {
+    final permissions = _funds.permissions;
+    if (permissions == null || !permissions.canManageFund) {
+      return;
+    }
+
+    final ledger = _funds.ledger;
+
+    final action = await showModalBottomSheet<FundSettingsAction>(
+      context: context,
+      builder: (_) => FundSettingsSheet(
+        fundName: fund.name,
+        canDelete:
+            ledger != null && !ledger.isLoading && ledger.summary.isEmpty,
+        onRestoreArchived: _funds.archivedFunds.isEmpty
+            ? null
+            : () => unawaited(_restoreArchivedFund()),
+      ),
+    );
+    if (action == null || !mounted) {
+      return;
+    }
+
+    switch (action) {
+      case FundSettingsAction.archive:
+        if (!await confirmArchiveFund(context, fund.name) || !mounted) {
+          return;
+        }
+        await _runFundAction(
+          () => _funds.archiveFund(fund),
+          success: '“${fund.name}” archived',
+          restore: fund,
+        );
+      case FundSettingsAction.delete:
+        if (!await confirmDeleteFund(context, fund.name) || !mounted) {
+          return;
+        }
+        await _runFundAction(
+          () => _funds.deleteFund(fund),
+          success: '“${fund.name}” deleted',
+        );
+    }
+  }
+
+  Future<void> _runFundAction(
+    Future<void> Function() action, {
+    required String success,
+    Fund? restore,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await action();
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(success),
+          action: restore == null
+              ? null
+              : SnackBarAction(
+                  label: 'Restore',
+                  onPressed: () => unawaited(_restoreFund(restore)),
+                ),
+        ),
+      );
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _restoreFund(Fund fund) async {
+    try {
+      await _funds.restoreFund(fund);
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _restoreArchivedFund() async {
+    final archived = _funds.archivedFunds;
+    if (archived.isEmpty) {
+      return;
+    }
+
+    final fund = await showDialog<Fund>(
+      context: context,
+      builder: (_) => RestoreFundDialog(funds: archived),
+    );
+    if (fund == null || !mounted) {
+      return;
+    }
+
+    await _restoreFund(fund);
   }
 
   Future<void> _openMembers(Fund fund) async {
@@ -262,18 +372,23 @@ class _FundsErrorPage extends StatelessWidget {
 
 class _NoFundsPage extends StatelessWidget {
   const _NoFundsPage({
+    required this.archivedFunds,
     required this.onCreateFund,
     required this.onRedeemInvite,
+    required this.onRestoreArchivedFund,
     required this.onSignOut,
   });
 
+  final List<Fund> archivedFunds;
   final VoidCallback onCreateFund;
   final VoidCallback onRedeemInvite;
+  final VoidCallback onRestoreArchivedFund;
   final Future<void> Function() onSignOut;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasArchived = archivedFunds.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -292,11 +407,17 @@ class _NoFundsPage extends StatelessWidget {
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              Text('No funds yet', style: theme.textTheme.titleMedium),
+              Text(
+                hasArchived ? 'No active funds' : 'No funds yet',
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               Text(
-                'Create a fund to start a shared ledger, '
-                'or join one with an invite.',
+                hasArchived
+                    ? 'Your funds are archived. Restore one, create a new '
+                          'fund, or join one with an invite.'
+                    : 'Create a fund to start a shared ledger, '
+                          'or join one with an invite.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium,
               ),
@@ -312,6 +433,19 @@ class _NoFundsPage extends StatelessWidget {
                 icon: const Icon(Icons.mail_outline),
                 label: const Text('Redeem an invite'),
               ),
+              if (hasArchived) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: onRestoreArchivedFund,
+                  icon: const Icon(Icons.unarchive_outlined),
+                  label: Text(
+                    archivedFunds.length == 1
+                        ? 'Restore an archived fund'
+                        : 'Restore an archived fund '
+                              '(${archivedFunds.length})',
+                  ),
+                ),
+              ],
             ],
           ),
         ),

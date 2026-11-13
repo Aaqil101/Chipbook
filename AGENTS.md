@@ -50,6 +50,9 @@ rules.
 - Entries are append-only. Never add update or delete. The only permitted
   mutation is `pending -> approved`; corrections are new entries with
   `reversesEntryId` set.
+- Funds are never destroyed while they hold a ledger. Organizers archive them
+  instead; only a fund with no entries may be deleted. Archived funds are
+  read-only (`is_fund_active` gates every write policy).
 - Reversals keep the target entry's currency and require a reason. Never mix
   currencies in a total.
 - Money is `int amountMinor` (smallest currency unit). Never use `double` for

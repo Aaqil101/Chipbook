@@ -554,6 +554,83 @@ void main() {
     expect(find.text('Travel fund'), findsOneWidget);
     expect(find.text('No entries yet'), findsOneWidget);
   });
+
+  testWidgets('organizers archive a fund and restore it', (tester) async {
+    final fundRepository = FakeFundRepository(
+      funds: [_fund('fund-a', 'Class fees')],
+    );
+    await _pumpSignedIn(tester, fundRepository: fundRepository);
+
+    await _openFundSettings(tester);
+    await tester.tap(find.text('Archive fund'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Archive'));
+    await tester.pumpAndSettle();
+
+    expect(fundRepository.funds.single.isArchived, isTrue);
+    expect(find.text('No active funds'), findsOneWidget);
+
+    await tester.tap(find.text('Restore an archived fund'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Class fees'));
+    await tester.pumpAndSettle();
+
+    expect(fundRepository.funds.single.isArchived, isFalse);
+    expect(find.text('Class fees'), findsOneWidget);
+    expect(find.text('No entries yet'), findsOneWidget);
+  });
+
+  testWidgets('a fund with entries can only be archived', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(id: 'approved', amountMinor: 5000, status: EntryStatus.approved),
+    );
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Class fees')],
+      entries: entries,
+    );
+
+    await _openFundSettings(tester);
+
+    expect(
+      find.text('Only a fund with no entries can be deleted'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Delete fund'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete “Class fees”?'), findsNothing);
+  });
+
+  testWidgets('organizers delete an empty fund', (tester) async {
+    final fundRepository = FakeFundRepository(
+      funds: [_fund('fund-a', 'Class fees')],
+    );
+    await _pumpSignedIn(tester, fundRepository: fundRepository);
+
+    await _openFundSettings(tester);
+    await tester.tap(find.text('Delete fund'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(fundRepository.funds, isEmpty);
+    expect(find.text('No funds yet'), findsOneWidget);
+  });
+
+  testWidgets('members cannot archive or delete a fund', (tester) async {
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Class fees')],
+      role: MemberRole.member,
+    );
+
+    await tester.tap(find.byIcon(Icons.swap_horiz));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fund settings'), findsNothing);
+  });
 }
 
 Future<void> _pumpSignedIn(
@@ -584,6 +661,13 @@ Future<void> _pumpSignedIn(
 
 Future<void> _openMembers(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.group_outlined));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openFundSettings(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.swap_horiz));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Fund settings'));
   await tester.pumpAndSettle();
 }
 
@@ -670,7 +754,11 @@ class FakeFundRepository implements FundRepository {
   void addFund(Fund fund) => _funds.add(fund);
 
   @override
-  Future<List<Fund>> getFunds() async => List.unmodifiable(_funds);
+  Future<List<Fund>> getFunds({bool includeArchived = false}) async {
+    return List.unmodifiable(
+      _funds.where((fund) => includeArchived || !fund.isArchived),
+    );
+  }
 
   @override
   Future<Fund> createFund({
@@ -686,6 +774,37 @@ class FakeFundRepository implements FundRepository {
     );
     _funds.add(fund);
     return fund;
+  }
+
+  @override
+  Future<void> archiveFund(String fundId) async {
+    _replace(fundId, archivedAt: DateTime(2026, 2, 1));
+  }
+
+  @override
+  Future<void> restoreFund(String fundId) async {
+    _replace(fundId, archivedAt: null);
+  }
+
+  @override
+  Future<void> deleteFund(String fundId) async {
+    _funds.removeWhere((fund) => fund.id == fundId);
+  }
+
+  void _replace(String fundId, {required DateTime? archivedAt}) {
+    final index = _funds.indexWhere((fund) => fund.id == fundId);
+    if (index == -1) {
+      return;
+    }
+    final current = _funds[index];
+    _funds[index] = Fund(
+      id: current.id,
+      name: current.name,
+      defaultCurrency: current.defaultCurrency,
+      createdBy: current.createdBy,
+      createdAt: current.createdAt,
+      archivedAt: archivedAt,
+    );
   }
 }
 

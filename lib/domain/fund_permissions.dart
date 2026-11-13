@@ -21,4 +21,7 @@ class FundPermissions {
   bool get canReverse => role == MemberRole.organizer;
 
   bool get canManageMembers => role == MemberRole.organizer;
+
+  /// Archive, restore, or delete the fund itself.
+  bool get canManageFund => role == MemberRole.organizer;
 }

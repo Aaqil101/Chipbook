@@ -24,13 +24,18 @@ any credentials; follow the setup below to connect your own.
 
 | Role      | Can do                                                        |
 | --------- | ------------------------------------------------------------- |
-| Organizer | Invite, approve, reverse, change roles, remove members        |
+| Organizer | Invite, approve, reverse, change roles, remove members, archive or delete a fund |
 | Member    | Add entries (pending until approved) and view the ledger      |
 | Observer  | View the ledger only                                          |
 
 Entries are append-only: nobody can edit or delete one. A correction is a new
 entry that reverses the original, and the original stays visible. Only
 approved entries count toward a total.
+
+A fund is never destroyed while it has a ledger. An organizer can archive it:
+it disappears from the fund list, its entries stay readable, and it can be
+restored later. A fund with no entries can be deleted outright. Archived funds
+are read-only and cannot receive entries, invites, or new members.
 
 ## Supabase setup
 
@@ -109,6 +114,9 @@ flutter run -d chrome --dart-define-from-file=.env
    The invitee signs in with that email and uses **Redeem an invite**.
 5. To correct an approved entry, use **Reverse** and give a reason. The
    original stays visible and the reversal reduces the same currency's total.
+6. Use **Fund settings** in the fund menu to archive the active fund, or to
+   delete it when it has no entries. Archived funds are listed on the
+   no-funds page, where they can be restored.
 
 ## Test it
 
@@ -126,8 +134,9 @@ npx supabase db query --remote --yes --file supabase/tests/rls_test.sql
 ```
 
 A successful run ends with `{"result":"RLS tests passed"}`. The suite covers
-selects, inserts, approvals, reversals, invites, and the last-organizer guard
-for every role. `supabase test db` is not used because it requires Docker.
+selects, inserts, approvals, reversals, invites, fund archival and deletion,
+and the last-organizer guard for every role. `supabase test db` is not used
+because it requires Docker.
 
 ## Deploy
 
@@ -182,7 +191,7 @@ Only the publishable key belongs in a client build. Never add a
 - `lib/screens/` — sign-in, fund shell, ledger, add-entry form, members page,
   and dialogs.
 - `supabase/migrations/` — schema, append-only and last-organizer triggers,
-  invite acceptance, and RLS policies.
+  invite acceptance, fund archival, and RLS policies.
 - `supabase/tests/rls_test.sql` — executable role and RLS suite.
 
 The database is the authority for roles and immutability: RLS limits reads and

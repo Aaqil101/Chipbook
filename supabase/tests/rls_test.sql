@@ -1160,6 +1160,220 @@ select pg_temp.assert_raises_message(
 );
 
 -- ---------------------------------------------------------------------------
+-- Fund archival and deletion.
+-- ---------------------------------------------------------------------------
+
+reset role;
+
+insert into auth.users (id, email) values
+  ('77777777-7777-4777-8777-777777777777', 'archive@example.com')
+on conflict (id) do nothing;
+
+select set_config(
+  'request.jwt.claim.sub',
+  '22222222-2222-4222-8222-222222222222',
+  true
+);
+set local role authenticated;
+
+-- Left pending so accepting an invite can be checked against archival.
+insert into public.invites (id, fund_id, email, role, token, expires_at) values (
+  'b5555555-5555-4555-8555-555555555555',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'archive@example.com',
+  'member',
+  'c5555555-5555-4555-8555-555555555555',
+  now() + interval '7 days'
+);
+
+-- An observer cannot archive or delete a fund.
+select set_config(
+  'request.jwt.claim.sub',
+  '33333333-3333-4333-8333-333333333333',
+  true
+);
+
+update public.funds
+set archived_at = now()
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and archived_at is null
+  ),
+  1,
+  'a non-organizer cannot archive a fund'
+);
+
+select pg_temp.assert_raises_message(
+  $stmt$ select public.delete_fund('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') $stmt$,
+  'only an organizer can delete this fund',
+  'a non-organizer cannot delete a fund'
+);
+
+-- An organizer can archive, and the archive is attributed to them.
+select set_config(
+  'request.jwt.claim.sub',
+  '22222222-2222-4222-8222-222222222222',
+  true
+);
+
+select pg_temp.assert_raises_message(
+  $stmt$
+    update public.funds
+    set name = 'Renamed fund'
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  $stmt$,
+  'funds are immutable; only archival may change',
+  'a fund cannot be renamed'
+);
+
+update public.funds
+set archived_at = now()
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and archived_at is not null
+      and archived_by = '22222222-2222-4222-8222-222222222222'
+  ),
+  1,
+  'an organizer can archive a fund'
+);
+
+-- An archived fund keeps its ledger readable but accepts no new records.
+select pg_temp.assert_true(
+  (
+    select count(*) > 0
+    from public.entries
+    where fund_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  ),
+  'an archived fund still shows its entries'
+);
+
+select pg_temp.assert_raises(
+  $stmt$
+    insert into public.entries (
+      fund_id, amount_minor, currency, contributor_name, status
+    ) values (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 100, 'USD', 'Organizer',
+      'approved'
+    )
+  $stmt$,
+  '42501',
+  'an archived fund accepts no new entries'
+);
+
+select pg_temp.assert_raises(
+  $stmt$
+    insert into public.invites (fund_id, email, role)
+    values (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'new@example.com', 'member'
+    )
+  $stmt$,
+  '42501',
+  'an archived fund accepts no new invites'
+);
+
+select pg_temp.assert_raises(
+  $stmt$
+    insert into public.memberships (fund_id, user_id, role)
+    values (
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      '55555555-5555-4555-8555-555555555555',
+      'member'
+    )
+  $stmt$,
+  '42501',
+  'an archived fund accepts no new memberships'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '77777777-7777-4777-8777-777777777777',
+  true
+);
+
+select pg_temp.assert_raises_message(
+  $stmt$
+    select public.accept_invite('c5555555-5555-4555-8555-555555555555')
+  $stmt$,
+  'This fund is archived',
+  'an invite to an archived fund cannot be accepted'
+);
+
+-- Restoring clears the archive and its attribution.
+select set_config(
+  'request.jwt.claim.sub',
+  '22222222-2222-4222-8222-222222222222',
+  true
+);
+
+update public.funds
+set archived_at = null
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and archived_at is null
+      and archived_by is null
+  ),
+  1,
+  'an organizer can restore a fund'
+);
+
+-- A fund with no entries can be deleted outright.
+insert into public.funds (id, name, default_currency) values (
+  'acacacac-acac-4cac-8cac-acacacacacac',
+  'Stray fund',
+  'USD'
+);
+
+select public.delete_fund('acacacac-acac-4cac-8cac-acacacacacac');
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.funds
+    where id = 'acacacac-acac-4cac-8cac-acacacacacac'
+  ),
+  0,
+  'an organizer can delete a fund with no entries'
+);
+
+-- The organizer guard must not block the membership cascade.
+reset role;
+
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.memberships
+    where fund_id = 'acacacac-acac-4cac-8cac-acacacacacac'
+  ),
+  0,
+  'deleting a fund removes its memberships'
+);
+
+set local role authenticated;
+
+select pg_temp.assert_raises_message(
+  $stmt$ select public.delete_fund('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') $stmt$,
+  'this fund has entries; archive it instead',
+  'a fund with entries cannot be deleted'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
 -- Fund creation with RETURNING.
 --
 -- The app inserts with RETURNING to read the new fund. The returned row is

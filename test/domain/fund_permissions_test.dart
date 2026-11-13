@@ -13,6 +13,7 @@ void main() {
       expect(permissions.canApprove, isFalse);
       expect(permissions.canReverse, isFalse);
       expect(permissions.canManageMembers, isFalse);
+      expect(permissions.canManageFund, isFalse);
     });
 
     test('member can view and add entries', () {
@@ -23,6 +24,7 @@ void main() {
       expect(permissions.canApprove, isFalse);
       expect(permissions.canReverse, isFalse);
       expect(permissions.canManageMembers, isFalse);
+      expect(permissions.canManageFund, isFalse);
     });
 
     test('organizer can do everything', () {
@@ -33,6 +35,7 @@ void main() {
       expect(permissions.canApprove, isTrue);
       expect(permissions.canReverse, isTrue);
       expect(permissions.canManageMembers, isTrue);
+      expect(permissions.canManageFund, isTrue);
     });
   });
 }
