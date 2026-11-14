@@ -16,8 +16,9 @@ Phase 2 is implemented on a hosted Supabase backend:
 - Member management with expiring invite codes
 - One currency per fund, with raised, paid-out, and balance totals
 
-The app is web-first. There are deliberately no `android/` or `ios/`
-directories, and there is no payment, wallet, or custody functionality.
+The app is web-first, and also builds as an Android app for phones and
+emulators. There is deliberately no `ios/` directory, and there is no payment,
+wallet, or custody functionality.
 
 Data lives in Supabase. This repository does not include a hosted project or
 any credentials; follow the setup below to connect your own.
@@ -92,8 +93,11 @@ are read-only and cannot receive entries, invites, or new members.
    set:
 
    - **Site URL:** `http://127.0.0.1:8080`
-   - **Redirect URLs:** `http://127.0.0.1:8080` and
-     `http://127.0.0.1:8080/**`
+   - **Redirect URLs:** `http://127.0.0.1:8080`,
+     `http://127.0.0.1:8080/**`, and `chipbook://login-callback`
+
+   The last entry returns magic links to the Android app; keep it even if you
+   only develop on the web.
 
    The email provider is enabled by default, and magic links expire after one
    hour. If you use a different local port or host, update both values to
@@ -120,6 +124,22 @@ page does not load. To launch Chrome directly instead:
 ```powershell
 flutter run -d chrome --dart-define-from-file=.env
 ```
+
+### Android
+
+The Android target signs in with the same magic link. Supabase returns it to
+the app through the `chipbook://login-callback` deep link, so that URL must be
+in the project's redirect allow list (step 5 above). After the emulator is
+running:
+
+```powershell
+flutter emulators --launch <emulator-id>
+flutter run -d emulator-5554 --dart-define-from-file=.env
+```
+
+`emulator-5554` is the first emulator; use `flutter devices` to find others.
+The build reads `.env` the same way, and only the publishable key belongs in
+it.
 
 ## Using it
 

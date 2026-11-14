@@ -6,8 +6,8 @@ with friends. It never holds, moves, or processes money. No payments, wallets,
 balances, or custody features, ever.
 
 ## Current state (phase 2)
-- Web-first (`flutter run -d chrome` or a web server). No `android/` or `ios/`
-  directories by design.
+- Web-first, with an Android target for phones and emulators. There is no
+  `ios/` directory by design.
 - Hosted Supabase backend with magic-link auth, funds, per-fund roles,
   approvals, reversals, invites, and entries in the fund currency.
 - Data lives in Supabase. The in-memory entry repository is test-only.
@@ -23,6 +23,7 @@ balances, or custody features, ever.
     flutter test test/domain/ledger_test.dart --plain-name "reversal"
     flutter run -d web-server --web-port 8080 --web-hostname 127.0.0.1 --dart-define-from-file=.env
     flutter run -d chrome --dart-define-from-file=.env
+    flutter run -d emulator-5554 --dart-define-from-file=.env
     flutter build web --release --dart-define-from-file=.env
     npx supabase login
     npx supabase link --project-ref <project-ref>
@@ -44,7 +45,10 @@ rules.
   into web builds, so rebuild after changing them.
 - `supabase/.temp/` contains linked-project state and is gitignored.
 - Supabase Auth needs a Site URL and redirect URLs matching the origin used to
-  run the app (local `http://127.0.0.1:8080` or the deployed URL).
+  run the app (local `http://127.0.0.1:8080` or the deployed URL). The Android
+  app also needs `chipbook://login-callback` in the redirect allow list; the
+  magic link returns there through the intent filter in
+  `android/app/src/main/AndroidManifest.xml`.
 
 ## Architecture rules
 - Approved entries are append-only. Never add update or delete for them. The
