@@ -67,6 +67,7 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final error = _error ?? widget.auth.failure?.message;
 
     return Scaffold(
       body: SafeArea(
@@ -76,8 +77,8 @@ class _SignInPageState extends State<SignInPage> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: _sent
-                  ? _sentConfirmation(theme)
-                  : _signInForm(context, theme),
+                  ? _sentConfirmation(theme, error)
+                  : _signInForm(context, theme, error),
             ),
           ),
         ),
@@ -85,7 +86,7 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
-  Widget _signInForm(BuildContext context, ThemeData theme) {
+  Widget _signInForm(BuildContext context, ThemeData theme, String? error) {
     return Form(
       key: _formKey,
       child: Column(
@@ -118,9 +119,9 @@ class _SignInPageState extends State<SignInPage> {
             validator: (value) => AuthValidation.emailError(value ?? ''),
             onFieldSubmitted: (_) => _send(),
           ),
-          if (_error != null) ...[
+          if (error != null) ...[
             const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+            Text(error, style: TextStyle(color: theme.colorScheme.error)),
           ],
           const SizedBox(height: 20),
           FilledButton(
@@ -144,7 +145,7 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
-  Widget _sentConfirmation(ThemeData theme) {
+  Widget _sentConfirmation(ThemeData theme, String? error) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -165,9 +166,20 @@ class _SignInPageState extends State<SignInPage> {
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium,
         ),
+        if (error != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            error,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
+        ],
         const SizedBox(height: 16),
         TextButton(
-          onPressed: () => setState(() => _sent = false),
+          onPressed: () {
+            widget.auth.clearFailure();
+            setState(() => _sent = false);
+          },
           child: const Text('Use a different email'),
         ),
       ],

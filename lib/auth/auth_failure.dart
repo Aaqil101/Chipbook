@@ -42,3 +42,36 @@ AuthFailure authFailure(Object error) {
     error,
   );
 }
+
+/// Explains why a magic link could not be used.
+///
+/// This arrives on the auth state stream rather than from a call the UI makes,
+/// and the raw text is usually about PKCE internals the user cannot act on.
+AuthFailure linkFailure(Object error) {
+  if (kDebugMode) {
+    debugPrint('magic link failed: $error');
+  }
+
+  if (error is AuthException) {
+    final message = error.message.toLowerCase();
+
+    if (error.code == 'otp_expired' || message.contains('expired')) {
+      return AuthFailure(
+        'That link has expired or was already used. Send a new one.',
+        error,
+      );
+    }
+
+    if (message.contains('code verifier')) {
+      return AuthFailure(
+        'That link cannot be used on this device. Send a new one.',
+        error,
+      );
+    }
+  }
+
+  return AuthFailure(
+    'Could not sign in with that link. Send a new one.',
+    error,
+  );
+}

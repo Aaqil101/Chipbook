@@ -25,4 +25,30 @@ void main() {
 
     expect(failure.message, contains('Check your connection'));
   });
+
+  test('an expired or reused link asks for a new one', () {
+    final failure = linkFailure(
+      const AuthException(
+        'Token has expired or is invalid',
+        statusCode: '403',
+        code: 'otp_expired',
+      ),
+    );
+
+    expect(failure.message, contains('expired or was already used'));
+  });
+
+  test('a link from another device explains why it cannot be used', () {
+    final failure = linkFailure(
+      const AuthException('Code verifier could not be found in local storage.'),
+    );
+
+    expect(failure.message, contains('cannot be used on this device'));
+  });
+
+  test('an unexplained link failure still offers a new link', () {
+    final failure = linkFailure(Exception('boom'));
+
+    expect(failure.message, contains('Send a new one'));
+  });
 }
