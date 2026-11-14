@@ -33,6 +33,13 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="chipbook" android:host="login-callback"/>
             </intent-filter>
+            <!-- app_links (through supabase_flutter) delivers the magic link.
+                 Flutter's own deep-link route push would send
+                 chipbook://login-callback?code=... to the Navigator, which has
+                 no route for it, so turn that handling off. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false"/>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
