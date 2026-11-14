@@ -101,8 +101,15 @@ are read-only and cannot receive entries, invites, or new members.
 
    The email provider is enabled by default, and magic links expire after one
    hour. If you use a different local port or host, update both values to
-   match. Hosted projects enforce email rate limits; check
-   **Authentication > Rate Limits** if magic links stop arriving.
+   match.
+
+   A hosted project sends auth mail through Supabase's built-in sender, which
+   allows 2 emails per hour per project and only delivers to addresses in your
+   organization. Anyone else fails with `email_address_not_authorized`, so
+   friends cannot sign in until you set up a custom SMTP provider under
+   **Authentication > Emails > SMTP Settings**. That is enough to try the app
+   on your own, which is all the built-in sender is for. `supabase start`
+   serves the same flows locally through Mailpit with no email limit.
 
 6. Continue with **Run it**, sign in, and create a fund. The database trigger
    makes the creator its first organizer. Invite codes are shared manually;
