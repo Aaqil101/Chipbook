@@ -148,6 +148,41 @@ flutter run -d emulator-5554 --dart-define-from-file=.env
 The build reads `.env` the same way, and only the publishable key belongs in
 it.
 
+### Signed release builds
+
+A release build uses whatever keystore `android/key.properties` points at, and
+falls back to the debug key when that file is missing, so `flutter run
+--release` works on a fresh checkout. The debug key must not be used for
+anything you hand out: anyone can sign a build that Android will accept as an
+update over it.
+
+Create the keystore once and keep it out of the repository:
+
+```powershell
+keytool -genkey -v -keystore $HOME\chipbook-release.jks -keyalg RSA `
+  -keysize 2048 -validity 10000 -alias chipbook
+```
+
+Then write `android/key.properties`, which is already gitignored:
+
+```properties
+storePassword=<keystore password>
+keyPassword=<key password>
+keyAlias=chipbook
+storeFile=C:/Users/<you>/chipbook-release.jks
+```
+
+Build and check which certificate signed the result:
+
+```powershell
+flutter build apk --release --dart-define-from-file=.env
+apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk
+```
+
+The certificate should be your alias, not `CN=Android Debug`. Losing the
+keystore means every future update needs a new application ID, so back it up
+somewhere durable.
+
 ## Using it
 
 1. Sign in with a magic link and create a fund. You become its first organizer.
