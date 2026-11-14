@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'auth_failure.dart';
 import 'magic_link_redirect.dart';
 
 /// Authentication operations the app needs, independent of Supabase.
@@ -40,11 +41,15 @@ class SupabaseAuthService implements AuthService {
       .distinct();
 
   @override
-  Future<void> sendMagicLink(String email) {
-    return _client.auth.signInWithOtp(
-      email: email.trim(),
-      emailRedirectTo: magicLinkRedirect(),
-    );
+  Future<void> sendMagicLink(String email) async {
+    try {
+      await _client.auth.signInWithOtp(
+        email: email.trim(),
+        emailRedirectTo: magicLinkRedirect(),
+      );
+    } catch (error) {
+      throw authFailure(error);
+    }
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app_info.dart';
 import '../auth/auth_controller.dart';
+import '../auth/auth_failure.dart';
 import '../domain/auth_validation.dart';
 
 /// Sends an email magic link and waits for the session to appear.
@@ -43,6 +44,11 @@ class _SignInPageState extends State<SignInPage> {
         return;
       }
       setState(() => _sent = true);
+    } on AuthFailure catch (failure) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = failure.message);
     } catch (_) {
       if (!mounted) {
         return;
