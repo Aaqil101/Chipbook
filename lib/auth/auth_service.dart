@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'magic_link_redirect.dart';
+
 /// Authentication operations the app needs, independent of Supabase.
 abstract interface class AuthService {
   bool get isSignedIn;
@@ -39,7 +41,10 @@ class SupabaseAuthService implements AuthService {
 
   @override
   Future<void> sendMagicLink(String email) {
-    return _client.auth.signInWithOtp(email: email.trim());
+    return _client.auth.signInWithOtp(
+      email: email.trim(),
+      emailRedirectTo: magicLinkRedirect(),
+    );
   }
 
   @override
