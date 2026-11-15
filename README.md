@@ -185,8 +185,10 @@ somewhere durable.
 
 ## Using it
 
-1. Sign in with a magic link and create a fund. You become its first organizer.
-   Pick a one-off, weekly, monthly, or yearly cadence and an optional target.
+1. Sign in with a magic link. **Home** lists every fund you can open; tap one
+   to view its ledger. Create a fund from Home and you become its first
+   organizer. Pick a one-off, weekly, monthly, or yearly cadence and an
+   optional target.
 2. Add entries; they are recorded in the fund currency and start pending.
 3. Organizers approve pending entries. Approved entries count toward the
    fund balance.
@@ -197,9 +199,11 @@ somewhere durable.
    The invitee signs in with that email and uses **Redeem an invite**.
 6. To correct an approved entry, use **Reverse** and give a reason. The
    original stays visible and the reversal reduces the fund balance.
-7. Use **Fund settings** in the fund menu to change the **Timing and target**,
-   archive the active fund, or delete it when it has no entries. Archived funds
-   are listed on the no-funds page, where they can be restored.
+7. Use the settings icon on the ledger, or **Settings > Manage fund**, to
+   change the **Timing and target**, archive the active fund, or delete it
+   when it has no entries. Archived funds are listed on Home, where they can
+   be restored. **Settings** also holds the signed-in account, sign out, and
+   the **About** page.
 
 ## Test it
 
@@ -272,8 +276,8 @@ Only the publishable key belongs in a client build. Never add a
   invites, plus Supabase implementations. Tests use the in-memory entry store.
 - `lib/state/` — `ChangeNotifier` controllers for auth, funds, and the active
   ledger.
-- `lib/screens/` — sign-in, fund shell, ledger, add-entry form, members page,
-  and dialogs.
+- `lib/screens/` — sign-in, the home fund list, ledger, add-entry form,
+  members page, settings, about page, and dialogs.
 - `supabase/migrations/` — schema, approval, immutable-entry, and
   last-organizer triggers, invite acceptance, fund archival, and RLS policies.
 - `supabase/tests/rls_test.sql` — executable role and RLS suite.

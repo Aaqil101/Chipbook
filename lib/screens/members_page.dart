@@ -21,6 +21,7 @@ class MembersPage extends StatefulWidget {
     required this.permissions,
     required this.membershipRepository,
     required this.inviteRepository,
+    this.onAccessChanged,
   });
 
   final String fundId;
@@ -29,6 +30,9 @@ class MembersPage extends StatefulWidget {
   final FundPermissions permissions;
   final MembershipRepository membershipRepository;
   final InviteRepository inviteRepository;
+
+  /// Called when the signed-in user's own access to the fund may have changed.
+  final VoidCallback? onAccessChanged;
 
   @override
   State<MembersPage> createState() => _MembersPageState();
@@ -121,6 +125,9 @@ class _MembersPageState extends State<MembersPage> {
       );
       await _load();
     });
+    if (member.userId == widget.currentUserId) {
+      widget.onAccessChanged?.call();
+    }
   }
 
   Future<void> _removeMember(Membership member) async {
@@ -142,6 +149,9 @@ class _MembersPageState extends State<MembersPage> {
       );
       await _load();
     });
+    if (member.userId == widget.currentUserId) {
+      widget.onAccessChanged?.call();
+    }
   }
 
   Future<void> _cancelInvite(Invite invite) async {
@@ -222,6 +232,7 @@ class _MembersPageState extends State<MembersPage> {
       body: _buildBody(),
       floatingActionButton: _canManage
           ? FloatingActionButton.extended(
+              heroTag: 'invite-member',
               onPressed: _isWorking ? null : _inviteMember,
               icon: const Icon(Icons.person_add_alt),
               label: const Text('Invite'),

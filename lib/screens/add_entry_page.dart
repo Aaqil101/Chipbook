@@ -94,7 +94,7 @@ class _AddEntryPageState extends State<AddEntryPage> {
                   ButtonSegment<EntryKind>(
                     value: EntryKind.contribution,
                     label: Text('Contribution'),
-                    icon: Icon(Icons.savings_outlined),
+                    icon: Icon(Icons.volunteer_activism),
                   ),
                   ButtonSegment<EntryKind>(
                     value: EntryKind.payout,

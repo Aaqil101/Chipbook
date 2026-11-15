@@ -10,10 +10,6 @@ import 'add_entry_page.dart';
 import 'period_progress_card.dart';
 import 'reverse_entry_dialog.dart';
 
-const _newFundAction = '__new_fund__';
-const _redeemInviteAction = '__redeem_invite__';
-const _fundSettingsAction = '__fund_settings__';
-
 /// Shows the running total, approved entries, and pending entries.
 class EntriesPage extends StatelessWidget {
   const EntriesPage({
@@ -21,13 +17,7 @@ class EntriesPage extends StatelessWidget {
     required this.controller,
     required this.fund,
     this.permissions,
-    this.funds = const <Fund>[],
-    this.onSelectFund,
-    this.onCreateFund,
-    this.onRedeemInvite,
-    this.onOpenMembers,
     this.onManageFund,
-    this.onSignOut,
   });
 
   final LedgerController controller;
@@ -36,20 +26,11 @@ class EntriesPage extends StatelessWidget {
   /// The signed-in user's role in this fund, or null until it is known.
   final FundPermissions? permissions;
 
-  final List<Fund> funds;
-  final ValueChanged<Fund>? onSelectFund;
-  final VoidCallback? onCreateFund;
-  final VoidCallback? onRedeemInvite;
-  final VoidCallback? onOpenMembers;
-
-  /// Opens the archive and delete actions for the active fund.
+  /// Opens timing, target, archive, and delete actions for [fund].
   final VoidCallback? onManageFund;
-  final Future<void> Function()? onSignOut;
 
   @override
   Widget build(BuildContext context) {
-    final signOut = onSignOut;
-
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
@@ -58,70 +39,18 @@ class EntriesPage extends StatelessWidget {
           appBar: AppBar(
             title: Text(fund.name, overflow: TextOverflow.ellipsis),
             actions: [
-              if (onOpenMembers != null)
+              if (onManageFund != null)
                 IconButton(
-                  onPressed: onOpenMembers,
-                  tooltip: 'Members',
-                  icon: const Icon(Icons.group_outlined),
-                ),
-              if (funds.isNotEmpty &&
-                  (onSelectFund != null || onCreateFund != null))
-                PopupMenuButton<String>(
-                  tooltip: 'Switch fund',
-                  icon: const Icon(Icons.swap_horiz),
-                  onSelected: _handleFundSelection,
-                  itemBuilder: (context) => [
-                    for (final fund in funds)
-                      PopupMenuItem<String>(
-                        value: fund.id,
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 18,
-                              child: fund.id == controller.fundId
-                                  ? const Icon(Icons.check, size: 18)
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                fund.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const PopupMenuDivider(),
-                    if (onRedeemInvite != null)
-                      const PopupMenuItem<String>(
-                        value: _redeemInviteAction,
-                        child: Text('Redeem invite'),
-                      ),
-                    const PopupMenuItem<String>(
-                      value: _newFundAction,
-                      child: Text('New fund'),
-                    ),
-                    if (onManageFund != null) ...[
-                      const PopupMenuDivider(),
-                      const PopupMenuItem<String>(
-                        value: _fundSettingsAction,
-                        child: Text('Fund settings'),
-                      ),
-                    ],
-                  ],
-                ),
-              if (signOut != null)
-                IconButton(
-                  onPressed: signOut,
-                  tooltip: 'Sign out',
-                  icon: const Icon(Icons.logout),
+                  onPressed: onManageFund,
+                  tooltip: 'Fund settings',
+                  icon: const Icon(Icons.settings_outlined),
                 ),
             ],
           ),
           body: _buildBody(context, summary),
           floatingActionButton: (permissions?.canAddEntry ?? false)
               ? FloatingActionButton.extended(
+                  heroTag: 'add-entry',
                   onPressed: () => _openAddEntry(context),
                   icon: const Icon(Icons.add),
                   label: const Text('Add entry'),
@@ -233,27 +162,6 @@ class EntriesPage extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _handleFundSelection(String value) {
-    if (value == _newFundAction) {
-      onCreateFund?.call();
-      return;
-    }
-    if (value == _redeemInviteAction) {
-      onRedeemInvite?.call();
-      return;
-    }
-    if (value == _fundSettingsAction) {
-      onManageFund?.call();
-      return;
-    }
-    for (final fund in funds) {
-      if (fund.id == value) {
-        onSelectFund?.call(fund);
-        return;
-      }
-    }
   }
 }
 

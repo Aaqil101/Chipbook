@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:chipbook/app_info.dart';
 import 'package:chipbook/auth/auth_controller.dart';
 import 'package:chipbook/auth/auth_service.dart';
 import 'package:chipbook/main.dart';
@@ -38,12 +39,186 @@ void main() {
     expect(find.text('No entries yet'), findsNothing);
   });
 
-  testWidgets('signed-in users see the empty ledger', (tester) async {
-    await _pumpSignedIn(tester, funds: [_fund('fund-a', 'Trip fund')]);
+  testWidgets('home lists funds and opens a ledger', (tester) async {
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      openLedger: false,
+    );
 
+    expect(find.text('Funds'), findsOneWidget);
     expect(find.text('Trip fund'), findsOneWidget);
+    expect(find.text('No entries yet'), findsNothing);
+
+    await tester.tap(find.text('Trip fund'));
+    await tester.pumpAndSettle();
+
     expect(find.text('No entries yet'), findsOneWidget);
     expect(find.text('Add entry'), findsOneWidget);
+  });
+
+  testWidgets('bottom navigation exposes home, ledger, members, and settings', (
+    tester,
+  ) async {
+    final memberships = FakeMembershipRepository(
+      members: [_membership('user-1', 'ada@example.com', MemberRole.organizer)],
+    );
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      memberships: memberships,
+      openLedger: false,
+    );
+
+    final navigation = find.byType(NavigationBar);
+    expect(navigation, findsOneWidget);
+    for (final label in ['Home', 'Ledger', 'Members', 'Settings']) {
+      expect(
+        find.descendant(of: navigation, matching: find.text(label)),
+        findsOneWidget,
+      );
+    }
+
+    expect(find.text('Funds'), findsOneWidget);
+
+    await _openTab(tester, 'Ledger');
+    expect(find.text('No entries yet'), findsOneWidget);
+
+    await _openMembers(tester);
+    expect(find.text('People with access to this ledger.'), findsOneWidget);
+
+    await _openSettings(tester);
+    expect(find.text('Account'), findsOneWidget);
+    expect(find.text('Current fund'), findsOneWidget);
+  });
+
+  testWidgets('settings opens the about page', (tester) async {
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      openLedger: false,
+    );
+
+    await _openSettings(tester);
+    await tester.tap(find.text('About ${AppInfo.name}'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppInfo.name), findsOneWidget);
+    expect(find.text('Version'), findsOneWidget);
+    expect(find.text('Open source licenses'), findsOneWidget);
+  });
+
+  testWidgets('the members tab follows the active fund', (tester) async {
+    final memberships = FakeMembershipRepository(
+      membersByFund: {
+        'fund-a': [
+          _membership('user-1', 'ada@example.com', MemberRole.organizer),
+        ],
+        'fund-b': [
+          _membership('user-1', 'ada@example.com', MemberRole.organizer),
+          _membership(
+            'user-2',
+            'grace@example.com',
+            MemberRole.member,
+            fundId: 'fund-b',
+          ),
+        ],
+      },
+    );
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund'), _fund('fund-b', 'Gift fund')],
+      memberships: memberships,
+      openLedger: false,
+    );
+
+    await _openMembers(tester);
+    expect(find.text('Trip fund'), findsOneWidget);
+    expect(find.text('grace@example.com'), findsNothing);
+
+    await _openTab(tester, 'Home');
+    await tester.tap(find.text('Gift fund'));
+    await tester.pumpAndSettle();
+
+    await _openMembers(tester);
+    expect(find.text('Gift fund'), findsOneWidget);
+    expect(find.text('grace@example.com'), findsOneWidget);
+  });
+
+  testWidgets('changing your own role refreshes ledger permissions', (
+    tester,
+  ) async {
+    final memberships = FakeMembershipRepository(
+      members: [
+        _membership('user-1', 'ada@example.com', MemberRole.organizer),
+        _membership('user-2', 'grace@example.com', MemberRole.organizer),
+      ],
+    );
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      memberships: memberships,
+    );
+
+    await _openMembers(tester);
+    await tester.tap(find.byTooltip('Manage ada@example.com'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change to Observer'));
+    await tester.pumpAndSettle();
+
+    expect(memberships.roleChanges, [MemberRole.observer]);
+
+    await _openTab(tester, 'Ledger');
+    expect(find.text('Add entry'), findsNothing);
+    expect(find.text('No entries yet'), findsOneWidget);
+  });
+
+  testWidgets('back from another tab returns home', (tester) async {
+    final memberships = FakeMembershipRepository(
+      members: [_membership('user-1', 'ada@example.com', MemberRole.organizer)],
+    );
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      memberships: memberships,
+    );
+
+    await _openSettings(tester);
+    expect(find.text('Account'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Funds'), findsOneWidget);
+    expect(find.text('Trip fund'), findsOneWidget);
+  });
+
+  testWidgets('home lists archived funds with a restore action', (
+    tester,
+  ) async {
+    final fundRepository = FakeFundRepository(
+      funds: [
+        _fund('fund-a', 'Trip fund'),
+        _fund('fund-b', 'Old fund', archivedAt: DateTime(2026, 2, 1)),
+      ],
+    );
+    await _pumpSignedIn(
+      tester,
+      fundRepository: fundRepository,
+      openLedger: false,
+    );
+
+    expect(find.text('Archived'), findsOneWidget);
+    expect(find.text('Old fund'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Restore Old fund'));
+    await tester.pumpAndSettle();
+
+    expect(
+      fundRepository.funds.firstWhere((fund) => fund.id == 'fund-b').isArchived,
+      isFalse,
+    );
+    expect(find.text('Old fund'), findsOneWidget);
   });
 
   testWidgets('users without funds are prompted to create one', (tester) async {
@@ -53,7 +228,7 @@ void main() {
     expect(find.text('Create a fund'), findsOneWidget);
   });
 
-  testWidgets('creating a fund opens its empty ledger', (tester) async {
+  testWidgets('creating a fund adds it to the home list', (tester) async {
     await _pumpSignedIn(tester);
 
     await tester.tap(find.text('Create a fund'));
@@ -64,6 +239,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Trip fund'), findsOneWidget);
+
+    await tester.tap(find.text('Trip fund'));
+    await tester.pumpAndSettle();
+
     expect(find.text('No entries yet'), findsOneWidget);
   });
 
@@ -349,8 +528,7 @@ void main() {
 
     expect(find.text('No entries yet'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.swap_horiz));
-    await tester.pumpAndSettle();
+    await _openTab(tester, 'Home');
     await tester.tap(find.text('Gift fund'));
     await tester.pumpAndSettle();
 
@@ -363,7 +541,8 @@ void main() {
   testWidgets('signing out returns to the sign-in screen', (tester) async {
     await _pumpSignedIn(tester, funds: [_fund('fund-a', 'Trip fund')]);
 
-    await tester.tap(find.byIcon(Icons.logout));
+    await _openSettings(tester);
+    await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
 
     expect(find.text('Send magic link'), findsOneWidget);
@@ -574,8 +753,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(invites.lastToken, FakeInviteRepository.testToken);
-    expect(find.text('Trip fund'), findsOneWidget);
     expect(find.text('Invite accepted'), findsOneWidget);
+    expect(find.text('Trip fund'), findsOneWidget);
+
+    await tester.tap(find.text('Trip fund'));
+    await tester.pumpAndSettle();
+    expect(find.text('No entries yet'), findsOneWidget);
   });
 
   testWidgets('add-entry form records in the fund currency', (tester) async {
@@ -625,6 +808,9 @@ void main() {
 
     expect(fundRepository.funds.single.defaultCurrency, 'UYU');
     expect(find.text('Travel fund'), findsOneWidget);
+
+    await tester.tap(find.text('Travel fund'));
+    await tester.pumpAndSettle();
     expect(find.text('No entries yet'), findsOneWidget);
   });
 
@@ -743,6 +929,9 @@ void main() {
 
     expect(fundRepository.funds.single.isArchived, isFalse);
     expect(find.text('Class fees'), findsOneWidget);
+
+    await tester.tap(find.text('Class fees'));
+    await tester.pumpAndSettle();
     expect(find.text('No entries yet'), findsOneWidget);
   });
 
@@ -792,10 +981,12 @@ void main() {
       role: MemberRole.member,
     );
 
-    await tester.tap(find.byIcon(Icons.swap_horiz));
-    await tester.pumpAndSettle();
+    expect(find.byTooltip('Fund settings'), findsNothing);
 
-    expect(find.text('Fund settings'), findsNothing);
+    await _openSettings(tester);
+    expect(find.text('Manage fund'), findsNothing);
+    expect(find.text('Archive fund'), findsNothing);
+    expect(find.text('Delete fund'), findsNothing);
   });
 
   testWidgets('creating a monthly fund stores its cadence and target', (
@@ -816,6 +1007,11 @@ void main() {
     final fund = fundRepository.funds.single;
     expect(fund.cadence, FundCadence.monthly);
     expect(fund.targetMinor, 50000);
+    expect(find.text('Class fees'), findsOneWidget);
+
+    await tester.tap(find.text('Class fees'));
+    await tester.pumpAndSettle();
+
     expect(find.text('This month'), findsOneWidget);
     expect(find.text('of USD 500.00 · 0% of target'), findsOneWidget);
   });
@@ -842,6 +1038,8 @@ void main() {
     final fund = fundRepository.funds.single;
     expect(fund.cadence, FundCadence.monthly);
     expect(fund.targetMinor, 50000);
+
+    await _openTab(tester, 'Ledger');
     expect(find.text('This month'), findsOneWidget);
     expect(find.text('of USD 500.00 · 0% of target'), findsOneWidget);
   });
@@ -855,33 +1053,58 @@ Future<void> _pumpSignedIn(
   MemberRole role = MemberRole.organizer,
   FakeMembershipRepository? memberships,
   FakeInviteRepository? invites,
+  bool openLedger = true,
 }) async {
   final fake = FakeAuthService(signedIn: true);
   final auth = AuthController(fake);
   addTearDown(fake.dispose);
   addTearDown(auth.dispose);
 
+  final repository = fundRepository ?? FakeFundRepository(funds: funds);
+
   await tester.pumpWidget(
     ChipbookApp(
       auth: auth,
-      fundRepository: fundRepository ?? FakeFundRepository(funds: funds),
+      fundRepository: repository,
       entryRepository: entries ?? InMemoryEntryRepository(),
       membershipRepository: memberships ?? FakeMembershipRepository(role: role),
       inviteRepository: invites ?? FakeInviteRepository(),
     ),
   );
   await tester.pumpAndSettle();
-}
 
-Future<void> _openMembers(WidgetTester tester) async {
-  await tester.tap(find.byIcon(Icons.group_outlined));
+  if (!openLedger) {
+    return;
+  }
+
+  Fund? firstActive;
+  for (final fund in repository.funds) {
+    if (!fund.isArchived) {
+      firstActive = fund;
+      break;
+    }
+  }
+  if (firstActive == null) {
+    return;
+  }
+
+  await tester.tap(find.widgetWithText(ListTile, firstActive.name).first);
   await tester.pumpAndSettle();
 }
+
+Future<void> _openTab(WidgetTester tester, String label) async {
+  await tester.tap(
+    find.descendant(of: find.byType(NavigationBar), matching: find.text(label)),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openMembers(WidgetTester tester) => _openTab(tester, 'Members');
+
+Future<void> _openSettings(WidgetTester tester) => _openTab(tester, 'Settings');
 
 Future<void> _openFundSettings(WidgetTester tester) async {
-  await tester.tap(find.byIcon(Icons.swap_horiz));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Fund settings'));
+  await tester.tap(find.byTooltip('Fund settings'));
   await tester.pumpAndSettle();
 }
 
@@ -897,6 +1120,7 @@ Fund _fund(
   String name, {
   FundCadence cadence = FundCadence.oneOff,
   int? targetMinor,
+  DateTime? archivedAt,
 }) {
   return Fund(
     id: id,
@@ -906,12 +1130,18 @@ Fund _fund(
     createdAt: DateTime(2026, 1, 1),
     cadence: cadence,
     targetMinor: targetMinor,
+    archivedAt: archivedAt,
   );
 }
 
-Membership _membership(String userId, String email, MemberRole role) {
+Membership _membership(
+  String userId,
+  String email,
+  MemberRole role, {
+  String fundId = 'fund-a',
+}) {
   return Membership(
-    fundId: 'fund-a',
+    fundId: fundId,
     userId: userId,
     email: email,
     role: role,
@@ -1066,18 +1296,24 @@ class FakeMembershipRepository implements MembershipRepository {
   FakeMembershipRepository({
     MemberRole role = MemberRole.organizer,
     List<Membership>? members,
+    this.membersByFund,
     this.mutationError,
   }) : _defaultRole = role,
        _members = members == null ? null : [...members];
 
   final MemberRole _defaultRole;
   final List<Membership>? _members;
+  final Map<String, List<Membership>>? membersByFund;
   final Object? mutationError;
   final List<MemberRole> roleChanges = [];
   final List<String> removedUserIds = [];
 
   @override
   Future<List<Membership>> getMemberships({required String fundId}) async {
+    final byFund = membersByFund;
+    if (byFund != null) {
+      return List.unmodifiable(byFund[fundId] ?? const <Membership>[]);
+    }
     final members = _members;
     if (members != null) {
       return List.unmodifiable(members);

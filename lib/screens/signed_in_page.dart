@@ -12,9 +12,8 @@ import '../repositories/membership_repository.dart';
 import '../state/fund_controller.dart';
 import 'create_fund_dialog.dart';
 import 'edit_fund_settings_dialog.dart';
-import 'entries_page.dart';
 import 'fund_settings_sheet.dart';
-import 'members_page.dart';
+import 'home_shell.dart';
 import 'redeem_invite_dialog.dart';
 import 'restore_fund_dialog.dart';
 
@@ -91,20 +90,24 @@ class _SignedInPageState extends State<SignedInPage> {
         }
 
         final permissions = _funds.permissions;
-        return EntriesPage(
-          controller: ledger,
+        return HomeShell(
+          ledger: ledger,
           fund: fund,
-          permissions: permissions,
           funds: _funds.funds,
-          onSelectFund: (fund) => unawaited(_selectFund(fund)),
+          archivedFunds: _funds.archivedFunds,
+          permissions: permissions,
+          currentUserId: widget.auth.userId,
+          currentUserEmail: widget.auth.email,
+          membershipRepository: widget.membershipRepository,
+          inviteRepository: widget.inviteRepository,
+          onOpenFund: _selectFund,
           onCreateFund: () => unawaited(_createFund()),
           onRedeemInvite: () => unawaited(_redeemInvite()),
-          onOpenMembers: permissions == null
-              ? null
-              : () => unawaited(_openMembers(fund)),
           onManageFund: (permissions?.canManageFund ?? false)
               ? () => unawaited(_manageFund(fund))
               : null,
+          onRestoreFund: (fund) => unawaited(_restoreFund(fund)),
+          onAccessChanged: () => unawaited(_refreshAccess(fund)),
           onSignOut: widget.auth.signOut,
         );
       },
@@ -277,31 +280,9 @@ class _SignedInPageState extends State<SignedInPage> {
     await _restoreFund(fund);
   }
 
-  Future<void> _openMembers(Fund fund) async {
-    final permissions = _funds.permissions;
-    if (permissions == null) {
-      return;
-    }
-
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => MembersPage(
-          fundId: fund.id,
-          fundName: fund.name,
-          currentUserId: widget.auth.userId,
-          permissions: permissions,
-          membershipRepository: widget.membershipRepository,
-          inviteRepository: widget.inviteRepository,
-        ),
-      ),
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    // The user's own role, or their access, may have changed.
-    await _funds.load(preferFundId: fund.id);
+  /// Reloads the user's role after their own membership may have changed.
+  Future<void> _refreshAccess(Fund fund) {
+    return _funds.load(preferFundId: fund.id);
   }
 
   Future<void> _redeemInvite() async {
@@ -431,7 +412,7 @@ class _NoFundsPage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.savings_outlined,
+                Icons.create_new_folder_outlined,
                 size: 48,
                 color: theme.colorScheme.primary,
               ),
