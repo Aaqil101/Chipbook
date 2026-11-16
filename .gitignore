@@ -19,6 +19,9 @@ doc/api/
 .env*
 !.env.example
 
+# Vercel CLI project link
+.vercel/
+
 # Avoid committing generated Javascript files:
 *.dart.js
 # Produced by the --dump-info flag.
