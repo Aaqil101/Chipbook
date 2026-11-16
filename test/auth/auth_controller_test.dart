@@ -18,7 +18,13 @@ class _FakeAuthService implements AuthService {
   String? get email => null;
 
   @override
+  String? get provider => null;
+
+  @override
   Stream<bool> get signedInChanges => _changes.stream;
+
+  @override
+  Future<void> signInWithGoogle() async {}
 
   @override
   Future<void> sendMagicLink(String email) async {}

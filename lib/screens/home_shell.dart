@@ -20,11 +20,14 @@ class HomeShell extends StatefulWidget {
     required this.fund,
     required this.funds,
     required this.currentUserId,
+    required this.currentUsername,
     required this.membershipRepository,
     required this.inviteRepository,
     this.archivedFunds = const <Fund>[],
     this.permissions,
     this.currentUserEmail,
+    this.currentUserProvider,
+    this.onRenameUsername,
     this.onOpenFund,
     this.onCreateFund,
     this.onRedeemInvite,
@@ -39,7 +42,10 @@ class HomeShell extends StatefulWidget {
   final List<Fund> funds;
   final List<Fund> archivedFunds;
   final String? currentUserId;
+  final String currentUsername;
   final String? currentUserEmail;
+  final String? currentUserProvider;
+  final Future<void> Function(String username)? onRenameUsername;
   final MembershipRepository membershipRepository;
   final InviteRepository inviteRepository;
 
@@ -122,8 +128,11 @@ class _HomeShellState extends State<HomeShell> {
               ),
             SettingsPage(
               fund: widget.fund,
+              username: widget.currentUsername,
               permissions: permissions,
               email: widget.currentUserEmail,
+              provider: widget.currentUserProvider,
+              onRenameUsername: widget.onRenameUsername,
               onManageFund: widget.onManageFund,
               onSignOut: widget.onSignOut,
             ),

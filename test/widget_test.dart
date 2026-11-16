@@ -13,10 +13,12 @@ import 'package:chipbook/models/fund_cadence.dart';
 import 'package:chipbook/models/invite.dart';
 import 'package:chipbook/models/member_role.dart';
 import 'package:chipbook/models/membership.dart';
+import 'package:chipbook/models/profile.dart';
 import 'package:chipbook/repositories/entry_repository.dart';
 import 'package:chipbook/repositories/fund_repository.dart';
 import 'package:chipbook/repositories/invite_repository.dart';
 import 'package:chipbook/repositories/membership_repository.dart';
+import 'package:chipbook/repositories/profile_repository.dart';
 
 void main() {
   testWidgets('signed-out users see the sign-in screen', (tester) async {
@@ -32,6 +34,7 @@ void main() {
         entryRepository: InMemoryEntryRepository(),
         membershipRepository: FakeMembershipRepository(),
         inviteRepository: FakeInviteRepository(),
+        profileRepository: FakeProfileRepository(),
       ),
     );
 
@@ -61,7 +64,7 @@ void main() {
     tester,
   ) async {
     final memberships = FakeMembershipRepository(
-      members: [_membership('user-1', 'ada@example.com', MemberRole.organizer)],
+      members: [_membership('user-1', 'ada', MemberRole.organizer)],
     );
     await _pumpSignedIn(
       tester,
@@ -100,7 +103,10 @@ void main() {
     );
 
     await _openSettings(tester);
-    await tester.tap(find.text('About ${AppInfo.name}'));
+    final about = find.text('About ${AppInfo.name}');
+    await tester.ensureVisible(about);
+    await tester.pumpAndSettle();
+    await tester.tap(about);
     await tester.pumpAndSettle();
 
     expect(find.text(AppInfo.name), findsOneWidget);
@@ -111,17 +117,10 @@ void main() {
   testWidgets('the members tab follows the active fund', (tester) async {
     final memberships = FakeMembershipRepository(
       membersByFund: {
-        'fund-a': [
-          _membership('user-1', 'ada@example.com', MemberRole.organizer),
-        ],
+        'fund-a': [_membership('user-1', 'ada', MemberRole.organizer)],
         'fund-b': [
-          _membership('user-1', 'ada@example.com', MemberRole.organizer),
-          _membership(
-            'user-2',
-            'grace@example.com',
-            MemberRole.member,
-            fundId: 'fund-b',
-          ),
+          _membership('user-1', 'ada', MemberRole.organizer),
+          _membership('user-2', 'grace', MemberRole.member, fundId: 'fund-b'),
         ],
       },
     );
@@ -134,7 +133,7 @@ void main() {
 
     await _openMembers(tester);
     expect(find.text('Trip fund'), findsOneWidget);
-    expect(find.text('grace@example.com'), findsNothing);
+    expect(find.text('grace'), findsNothing);
 
     await _openTab(tester, 'Home');
     await tester.tap(find.text('Gift fund'));
@@ -142,7 +141,7 @@ void main() {
 
     await _openMembers(tester);
     expect(find.text('Gift fund'), findsOneWidget);
-    expect(find.text('grace@example.com'), findsOneWidget);
+    expect(find.text('grace'), findsOneWidget);
   });
 
   testWidgets('changing your own role refreshes ledger permissions', (
@@ -150,8 +149,8 @@ void main() {
   ) async {
     final memberships = FakeMembershipRepository(
       members: [
-        _membership('user-1', 'ada@example.com', MemberRole.organizer),
-        _membership('user-2', 'grace@example.com', MemberRole.organizer),
+        _membership('user-1', 'ada', MemberRole.organizer),
+        _membership('user-2', 'grace', MemberRole.organizer),
       ],
     );
     await _pumpSignedIn(
@@ -161,7 +160,7 @@ void main() {
     );
 
     await _openMembers(tester);
-    await tester.tap(find.byTooltip('Manage ada@example.com'));
+    await tester.tap(find.byTooltip('Manage ada'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Change to Observer'));
     await tester.pumpAndSettle();
@@ -175,7 +174,7 @@ void main() {
 
   testWidgets('back from another tab returns home', (tester) async {
     final memberships = FakeMembershipRepository(
-      members: [_membership('user-1', 'ada@example.com', MemberRole.organizer)],
+      members: [_membership('user-1', 'ada', MemberRole.organizer)],
     );
     await _pumpSignedIn(
       tester,
@@ -259,6 +258,7 @@ void main() {
         entryRepository: InMemoryEntryRepository(),
         membershipRepository: FakeMembershipRepository(),
         inviteRepository: FakeInviteRepository(),
+        profileRepository: FakeProfileRepository(),
       ),
     );
 
@@ -268,6 +268,58 @@ void main() {
 
     expect(fake.lastEmail, 'ada@example.com');
     expect(find.text('Check your email'), findsOneWidget);
+  });
+
+  testWidgets('signed-in users choose a username before the app', (
+    tester,
+  ) async {
+    final profiles = FakeProfileRepository();
+    await _pumpSignedIn(
+      tester,
+      profiles: profiles,
+      funds: [_fund('fund-a', 'Trip fund')],
+      openLedger: false,
+    );
+
+    expect(find.text('Choose a username'), findsOneWidget);
+    expect(find.text('ada@example.com'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField), 'Ada');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Use lowercase letters only'), findsOneWidget);
+    expect(profiles.saveCount, 0);
+
+    await tester.enterText(find.byType(TextFormField), 'ada_l');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(profiles.profile?.username, 'ada_l');
+    expect(find.text('Funds'), findsOneWidget);
+  });
+
+  testWidgets('settings shows the username and renames it', (tester) async {
+    final profiles = FakeProfileRepository(profile: _profile('user-1', 'ada'));
+    await _pumpSignedIn(
+      tester,
+      profiles: profiles,
+      funds: [_fund('fund-a', 'Trip fund')],
+    );
+
+    await _openSettings(tester);
+    expect(find.text('@ada'), findsOneWidget);
+    expect(find.text('ada@example.com'), findsOneWidget);
+    expect(find.text('Signed in with an email link'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Change username'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'ada_l');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(profiles.profile?.username, 'ada_l');
+    expect(find.text('@ada_l'), findsOneWidget);
   });
 
   testWidgets('pending entries show up without changing the total', (
@@ -551,9 +603,9 @@ void main() {
   testWidgets('members page shows friendly role labels', (tester) async {
     final memberships = FakeMembershipRepository(
       members: [
-        _membership('user-1', 'ada@example.com', MemberRole.organizer),
-        _membership('user-2', 'grace@example.com', MemberRole.member),
-        _membership('user-3', 'linus@example.com', MemberRole.observer),
+        _membership('user-1', 'ada', MemberRole.organizer),
+        _membership('user-2', 'grace', MemberRole.member),
+        _membership('user-3', 'linus', MemberRole.observer),
       ],
     );
     await _pumpSignedIn(
@@ -564,9 +616,9 @@ void main() {
 
     await _openMembers(tester);
 
-    expect(find.text('ada@example.com (you)'), findsOneWidget);
-    expect(find.text('grace@example.com'), findsOneWidget);
-    expect(find.text('linus@example.com'), findsOneWidget);
+    expect(find.text('ada (you)'), findsOneWidget);
+    expect(find.text('grace'), findsOneWidget);
+    expect(find.text('linus'), findsOneWidget);
     expect(find.text('Organizer'), findsOneWidget);
     expect(find.text('Member'), findsOneWidget);
     expect(find.text('Observer'), findsOneWidget);
@@ -575,7 +627,7 @@ void main() {
 
   testWidgets('organizers create an invite for a chosen role', (tester) async {
     final memberships = FakeMembershipRepository(
-      members: [_membership('user-1', 'ada@example.com', MemberRole.organizer)],
+      members: [_membership('user-1', 'ada', MemberRole.organizer)],
     );
     final invites = FakeInviteRepository();
     await _pumpSignedIn(
@@ -612,8 +664,8 @@ void main() {
   testWidgets('members cannot invite or manage other members', (tester) async {
     final memberships = FakeMembershipRepository(
       members: [
-        _membership('user-1', 'ada@example.com', MemberRole.member),
-        _membership('user-2', 'grace@example.com', MemberRole.organizer),
+        _membership('user-1', 'ada', MemberRole.member),
+        _membership('user-2', 'grace', MemberRole.organizer),
       ],
     );
     await _pumpSignedIn(
@@ -625,7 +677,7 @@ void main() {
     await _openMembers(tester);
 
     expect(find.text('Invite'), findsNothing);
-    expect(find.byTooltip('Manage grace@example.com'), findsNothing);
+    expect(find.byTooltip('Manage grace'), findsNothing);
     expect(find.text('Member'), findsOneWidget);
     expect(find.text('Organizer'), findsOneWidget);
   });
@@ -634,7 +686,7 @@ void main() {
     tester,
   ) async {
     final memberships = FakeMembershipRepository(
-      members: [_membership('user-1', 'ada@example.com', MemberRole.organizer)],
+      members: [_membership('user-1', 'ada', MemberRole.organizer)],
     );
     await _pumpSignedIn(
       tester,
@@ -645,7 +697,7 @@ void main() {
     await _openMembers(tester);
 
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
-    expect(find.byTooltip('Manage ada@example.com'), findsNothing);
+    expect(find.byTooltip('Manage ada'), findsNothing);
     expect(find.text('Invite'), findsOneWidget);
   });
 
@@ -654,8 +706,8 @@ void main() {
   ) async {
     final memberships = FakeMembershipRepository(
       members: [
-        _membership('user-1', 'ada@example.com', MemberRole.organizer),
-        _membership('user-2', 'grace@example.com', MemberRole.organizer),
+        _membership('user-1', 'ada', MemberRole.organizer),
+        _membership('user-2', 'grace', MemberRole.organizer),
       ],
     );
     await _pumpSignedIn(
@@ -665,7 +717,7 @@ void main() {
     );
 
     await _openMembers(tester);
-    await tester.tap(find.byTooltip('Manage grace@example.com'));
+    await tester.tap(find.byTooltip('Manage grace'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Remove from fund'));
     await tester.pumpAndSettle();
@@ -673,14 +725,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(memberships.removedUserIds, ['user-2']);
-    expect(find.text('grace@example.com'), findsNothing);
+    expect(find.text('grace'), findsNothing);
   });
 
   testWidgets('the database last-organizer guard is surfaced', (tester) async {
     final memberships = FakeMembershipRepository(
       members: [
-        _membership('user-1', 'ada@example.com', MemberRole.organizer),
-        _membership('user-2', 'grace@example.com', MemberRole.organizer),
+        _membership('user-1', 'ada', MemberRole.organizer),
+        _membership('user-2', 'grace', MemberRole.organizer),
       ],
       mutationError: Exception('a fund must keep at least one organizer'),
     );
@@ -691,7 +743,7 @@ void main() {
     );
 
     await _openMembers(tester);
-    await tester.tap(find.byTooltip('Manage grace@example.com'));
+    await tester.tap(find.byTooltip('Manage grace'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Remove from fund'));
     await tester.pumpAndSettle();
@@ -699,7 +751,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('at least one organizer'), findsOneWidget);
-    expect(find.text('grace@example.com'), findsOneWidget);
+    expect(find.text('grace'), findsOneWidget);
   });
 
   testWidgets('expired invites are marked in the member list', (tester) async {
@@ -716,7 +768,7 @@ void main() {
       ),
     );
     final memberships = FakeMembershipRepository(
-      members: [_membership('user-1', 'ada@example.com', MemberRole.organizer)],
+      members: [_membership('user-1', 'ada', MemberRole.organizer)],
     );
     await _pumpSignedIn(
       tester,
@@ -1053,6 +1105,7 @@ Future<void> _pumpSignedIn(
   MemberRole role = MemberRole.organizer,
   FakeMembershipRepository? memberships,
   FakeInviteRepository? invites,
+  FakeProfileRepository? profiles,
   bool openLedger = true,
 }) async {
   final fake = FakeAuthService(signedIn: true);
@@ -1069,6 +1122,8 @@ Future<void> _pumpSignedIn(
       entryRepository: entries ?? InMemoryEntryRepository(),
       membershipRepository: memberships ?? FakeMembershipRepository(role: role),
       inviteRepository: invites ?? FakeInviteRepository(),
+      profileRepository:
+          profiles ?? FakeProfileRepository(profile: _profile('user-1', 'ada')),
     ),
   );
   await tester.pumpAndSettle();
@@ -1134,16 +1189,24 @@ Fund _fund(
   );
 }
 
+Profile _profile(String userId, String username) {
+  return Profile(
+    userId: userId,
+    username: username,
+    createdAt: DateTime(2026, 1, 1),
+  );
+}
+
 Membership _membership(
   String userId,
-  String email,
+  String username,
   MemberRole role, {
   String fundId = 'fund-a',
 }) {
   return Membership(
     fundId: fundId,
     userId: userId,
-    email: email,
+    username: username,
     role: role,
     createdAt: DateTime(2026, 1, 1),
   );
@@ -1187,7 +1250,13 @@ class FakeAuthService implements AuthService {
   String? get email => _isSignedIn ? 'ada@example.com' : null;
 
   @override
+  String? get provider => _isSignedIn ? 'email' : null;
+
+  @override
   Stream<bool> get signedInChanges => _changes.stream;
+
+  @override
+  Future<void> signInWithGoogle() async {}
 
   @override
   Future<void> sendMagicLink(String email) async {
@@ -1201,6 +1270,31 @@ class FakeAuthService implements AuthService {
   }
 
   void dispose() => _changes.close();
+}
+
+class FakeProfileRepository implements ProfileRepository {
+  FakeProfileRepository({this.profile});
+
+  Profile? profile;
+  int saveCount = 0;
+
+  @override
+  Future<Profile?> getProfile({required String userId}) async => profile;
+
+  @override
+  Future<Profile> saveUsername({
+    required String userId,
+    required String username,
+  }) async {
+    saveCount++;
+    final saved = Profile(
+      userId: userId,
+      username: username,
+      createdAt: DateTime(2026, 1, 1),
+    );
+    profile = saved;
+    return saved;
+  }
 }
 
 class FakeFundRepository implements FundRepository {
@@ -1322,7 +1416,7 @@ class FakeMembershipRepository implements MembershipRepository {
       Membership(
         fundId: fundId,
         userId: 'user-1',
-        email: 'ada@example.com',
+        username: 'ada',
         role: _defaultRole,
         createdAt: DateTime(2026, 1, 1),
       ),
@@ -1354,7 +1448,7 @@ class FakeMembershipRepository implements MembershipRepository {
       userId: current.userId,
       role: role,
       createdAt: current.createdAt,
-      email: current.email,
+      username: current.username,
     );
   }
 

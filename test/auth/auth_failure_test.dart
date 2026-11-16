@@ -27,7 +27,7 @@ void main() {
   });
 
   test('an expired or reused link asks for a new one', () {
-    final failure = linkFailure(
+    final failure = signInFailure(
       const AuthException(
         'Token has expired or is invalid',
         statusCode: '403',
@@ -39,16 +39,16 @@ void main() {
   });
 
   test('a link from another device explains why it cannot be used', () {
-    final failure = linkFailure(
+    final failure = signInFailure(
       const AuthException('Code verifier could not be found in local storage.'),
     );
 
     expect(failure.message, contains('cannot be used on this device'));
   });
 
-  test('an unexplained link failure still offers a new link', () {
-    final failure = linkFailure(Exception('boom'));
+  test('an unexplained sign-in failure still asks the user to try again', () {
+    final failure = signInFailure(Exception('boom'));
 
-    expect(failure.message, contains('Send a new one'));
+    expect(failure.message, contains('Try again'));
   });
 }

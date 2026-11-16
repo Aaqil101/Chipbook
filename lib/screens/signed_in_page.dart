@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../app_info.dart';
 import '../auth/auth_controller.dart';
 import '../models/fund.dart';
+import '../models/profile.dart';
 import '../repositories/entry_repository.dart';
 import '../repositories/fund_repository.dart';
 import '../repositories/invite_repository.dart';
@@ -22,6 +23,8 @@ class SignedInPage extends StatefulWidget {
   const SignedInPage({
     super.key,
     required this.auth,
+    required this.profile,
+    required this.onRenameUsername,
     required this.fundRepository,
     required this.entryRepository,
     required this.membershipRepository,
@@ -29,6 +32,8 @@ class SignedInPage extends StatefulWidget {
   });
 
   final AuthController auth;
+  final Profile profile;
+  final Future<void> Function(String username) onRenameUsername;
   final FundRepository fundRepository;
   final EntryRepository entryRepository;
   final MembershipRepository membershipRepository;
@@ -97,7 +102,10 @@ class _SignedInPageState extends State<SignedInPage> {
           archivedFunds: _funds.archivedFunds,
           permissions: permissions,
           currentUserId: widget.auth.userId,
+          currentUsername: widget.profile.username,
           currentUserEmail: widget.auth.email,
+          currentUserProvider: widget.auth.provider,
+          onRenameUsername: widget.onRenameUsername,
           membershipRepository: widget.membershipRepository,
           inviteRepository: widget.inviteRepository,
           onOpenFund: _selectFund,

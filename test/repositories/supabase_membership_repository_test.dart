@@ -1,7 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chipbook/models/member_role.dart';
 import 'package:chipbook/repositories/supabase_membership_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 const _fundId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -9,7 +8,7 @@ void main() {
   test('parses a member directory row without a fund id column', () {
     final membership = parseMemberDirectoryRow({
       'user_id': '11111111-1111-4111-8111-111111111111',
-      'email': 'organizer@example.com',
+      'username': 'organizer',
       'role': 'organizer',
       'created_at': '2026-11-13T03:03:43.14981+00:00',
     }, _fundId);
@@ -17,7 +16,8 @@ void main() {
     expect(membership.fundId, _fundId);
     expect(membership.userId, '11111111-1111-4111-8111-111111111111');
     expect(membership.role, MemberRole.organizer);
-    expect(membership.email, 'organizer@example.com');
+    expect(membership.username, 'organizer');
+    expect(membership.displayName, 'organizer');
     expect(membership.createdAt.isUtc, isFalse);
     expect(
       membership.createdAt.toUtc(),
@@ -25,17 +25,17 @@ void main() {
     );
   });
 
-  test('keeps the queried fund when the row has no fund id', () {
+  test('a member without a profile falls back to their user id', () {
     final membership = parseMemberDirectoryRow({
       'user_id': '22222222-2222-4222-8222-222222222222',
-      'email': '',
+      'username': '',
       'role': 'observer',
       'created_at': '2026-11-13T03:03:43.14981+00:00',
     }, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
 
     expect(membership.fundId, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
     expect(membership.role, MemberRole.observer);
-    expect(membership.email, '');
-    expect(membership.displayName, isNotEmpty);
+    expect(membership.username, '');
+    expect(membership.displayName, '22222222-2222-4222-8222-222222222222');
   });
 }

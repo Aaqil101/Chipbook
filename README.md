@@ -8,7 +8,8 @@ money. It only keeps the record.
 
 Phase 2 is implemented on a hosted Supabase backend:
 
-- Magic-link email sign-in and a session gate
+- Google sign-in, with an email magic link as a fallback
+- A user-chosen username in the member list, with email addresses kept private
 - Multiple funds, with the creator becoming the first organizer
 - Organizer approvals and reversals with a required reason
 - Organizer payouts for money leaving the fund
@@ -100,20 +101,46 @@ are read-only and cannot receive entries, invites, or new members.
    only develop on the web.
 
    The email provider is enabled by default, and magic links expire after one
-   hour. If you use a different local port or host, update both values to
-   match.
+   hour. Google sign-in returns through the same allow list, so no extra
+   redirect URL is needed. If you use a different local port or host, update
+   both values to match.
 
-   A hosted project sends auth mail through Supabase's built-in sender, which
-   allows 2 emails per hour per project and only delivers to addresses in your
-   organization. Anyone else fails with `email_address_not_authorized`, so
-   friends cannot sign in until you set up a custom SMTP provider under
-   **Authentication > Emails > SMTP Settings**. That is enough to try the app
-   on your own, which is all the built-in sender is for. `supabase start`
+   **Email fallback.** A hosted project sends auth mail through Supabase's
+   built-in sender, which allows 2 emails per hour per project and only
+   delivers to addresses in your organization. Anyone else fails with
+   `email_address_not_authorized`. Add a custom SMTP provider under
+   **Authentication > Emails > SMTP Settings** (SMTP2GO, Resend, or another
+   provider that verifies your sender domain) so friends outside the
+   organization can receive a link, then raise the auth email rate limit. The
+   built-in sender is only for trying the app yourself; `supabase start`
    serves the same flows locally through Mailpit with no email limit.
 
-6. Continue with **Run it**, sign in, and create a fund. The database trigger
-   makes the creator its first organizer. Invite codes are shared manually;
-   Chipbook does not send invitation emails.
+   **Google sign-in.** Google is the primary sign-in. In the Google Cloud
+   Console, create an OAuth 2.0 Client ID of type **Web application** and add
+   `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized
+   redirect URI. Then open **Authentication > Providers > Google** in
+   Supabase, enable it, and paste the client ID and secret. Web and Android
+   both sign in through the browser and return to the app through the
+   `chipbook://login-callback` redirect.
+
+6. Continue with **Run it**, sign in, and choose a username. The member list
+   shows that handle instead of an email address, and existing accounts see
+   the setup screen once. The database trigger makes a fund's creator its
+   first organizer. Invite codes are shared manually; Chipbook does not send
+   invitation emails.
+
+### Email templates
+
+The sign-in and invitation mail bodies live in `supabase/templates/` so style
+changes are reviewable. The hosted project still uses the copies in
+**Authentication > Emails**; `supabase db push` does not sync them and this CLI
+version does not compare them in `config diff`, so update the dashboard by hand.
+The files also feed `supabase start` for local mail. Avoid `supabase config push`
+for templates: it would also push dev-only values such as the local Site URL and
+email rate limit.
+
+Never commit SMTP credentials, Gmail App Passwords, OAuth client secrets, or
+the project's service key. Those belong only in the Supabase dashboard.
 
 ## Run it
 
@@ -134,10 +161,10 @@ flutter run -d chrome --dart-define-from-file=.env
 
 ### Android
 
-The Android target signs in with the same magic link. Supabase returns it to
-the app through the `chipbook://login-callback` deep link, so that URL must be
-in the project's redirect allow list (step 5 above). After the emulator is
-running:
+The Android target uses Google sign-in or the same magic link. Supabase returns
+a sign-in to the app through the `chipbook://login-callback` deep link, so that
+URL must be in the project's redirect allow list (step 5 above). After the
+emulator is running:
 
 ```powershell
 flutter emulators --launch <emulator-id>
@@ -185,8 +212,10 @@ somewhere durable.
 
 ## Using it
 
-1. Sign in with a magic link. **Home** lists every fund you can open; tap one
-   to view its ledger. Create a fund from Home and you become its first
+1. Sign in with Google, or use an email link as a fallback. The first sign-in
+   asks for a username, which is what other members see; your email address is
+   never shown in a member list. **Home** lists every fund you can open; tap
+   one to view its ledger. Create a fund from Home and you become its first
    organizer. Pick a one-off, weekly, monthly, or yearly cadence and an
    optional target.
 2. Add entries; they are recorded in the fund currency and start pending.
@@ -196,14 +225,15 @@ somewhere durable.
    payee and a reason, is approved immediately, and reduces the balance. A
    payout larger than the balance warns but is still recorded.
 5. Open **Members** to invite an email with a role, then copy the invite code.
-   The invitee signs in with that email and uses **Redeem an invite**.
+   The invitee signs in with that same address, through Google or a magic link,
+   and uses **Redeem an invite**.
 6. To correct an approved entry, use **Reverse** and give a reason. The
    original stays visible and the reversal reduces the fund balance.
 7. Use the settings icon on the ledger, or **Settings > Manage fund**, to
    change the **Timing and target**, archive the active fund, or delete it
    when it has no entries. Archived funds are listed on Home, where they can
-   be restored. **Settings** also holds the signed-in account, sign out, and
-   the **About** page.
+   be restored. **Settings** also shows the signed-in account, lets you change
+   your username, and holds sign out and the **About** page.
 
 ## Test it
 
@@ -221,9 +251,10 @@ npx supabase db query --remote --yes --file supabase/tests/rls_test.sql
 ```
 
 A successful run ends with `{"result":"RLS tests passed"}`. The suite covers
-selects, inserts, approvals, reversals, invites, fund cadence and targets, fund
-archival and deletion, and the last-organizer guard for every role. `supabase
-test db` is not used because it requires Docker.
+selects, inserts, approvals, reversals, invites, profile usernames and their
+privacy, fund cadence and targets, fund archival and deletion, and the
+last-organizer guard for every role. `supabase test db` is not used because it
+requires Docker.
 
 ## Deploy
 
@@ -251,8 +282,8 @@ own is required.
      `https://your-domain.example/**`
 
    Keep the local `http://127.0.0.1:8080` entries too if you still develop
-   against the same project. Magic links return to the Site URL, so it must
-   match the deployed origin.
+   against the same project. Magic links and Google sign-in return to the Site
+   URL, so it must match the deployed origin.
 
 4. If you host under a subpath (for example GitHub Pages), build with the
    matching base path and use that full URL as the Site URL:
@@ -267,17 +298,18 @@ Only the publishable key belongs in a client build. Never add a
 
 ## How it works
 
-- `lib/models/` — `Entry`, `Fund`, `Membership`, `Invite`, `MemberRole`; money
-  is always an integer `amountMinor`.
+- `lib/models/` — `Entry`, `Fund`, `Membership`, `Invite`, `MemberRole`, and
+  `Profile`; money is always an integer `amountMinor`.
 - `lib/domain/` — approved-entry totals, payouts, and reversals, cadence
-  periods, currency grouping, currency catalog, money parsing/formatting, and
-  validation.
-- `lib/repositories/` — interfaces for entries, funds, memberships, and
-  invites, plus Supabase implementations. Tests use the in-memory entry store.
-- `lib/state/` — `ChangeNotifier` controllers for auth, funds, and the active
-  ledger.
-- `lib/screens/` — sign-in, the home fund list, ledger, add-entry form,
-  members page, settings, about page, and dialogs.
+  periods, currency grouping, currency catalog, money parsing/formatting,
+  username and sign-in validation.
+- `lib/repositories/` — interfaces for entries, funds, memberships, invites,
+  and profiles, plus Supabase implementations. Tests use the in-memory entry
+  store.
+- `lib/state/` — `ChangeNotifier` controllers for auth, funds, the active
+  ledger, and the signed-in profile.
+- `lib/screens/` — sign-in, profile setup, the home fund list, ledger,
+  add-entry form, members page, settings, about page, and dialogs.
 - `supabase/migrations/` — schema, approval, immutable-entry, and
   last-organizer triggers, invite acceptance, fund archival, and RLS policies.
 - `supabase/tests/rls_test.sql` — executable role and RLS suite.

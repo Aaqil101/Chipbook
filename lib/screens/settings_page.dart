@@ -2,16 +2,21 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app_info.dart';
 import '../domain/fund_permissions.dart';
+import '../domain/sign_in_provider.dart';
 import '../models/fund.dart';
 import 'about_page.dart';
+import 'rename_username_dialog.dart';
 
 /// Account, current fund management, and app information.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
     required this.fund,
+    required this.username,
     this.permissions,
     this.email,
+    this.provider,
+    this.onRenameUsername,
     this.onManageFund,
     this.onSignOut,
   });
@@ -19,10 +24,20 @@ class SettingsPage extends StatelessWidget {
   /// The fund currently shown in the Ledger tab.
   final Fund fund;
 
+  /// The name other members see.
+  final String username;
+
   /// The signed-in user's role in [fund], or null until it is known.
   final FundPermissions? permissions;
 
+  /// The verified address behind the session, shown read-only.
   final String? email;
+
+  /// The provider behind the session, such as `google` or `email`.
+  final String? provider;
+
+  /// Opens the rename dialog for [username].
+  final Future<void> Function(String username)? onRenameUsername;
 
   /// Opens timing, target, archive, and delete actions for [fund].
   final VoidCallback? onManageFund;
@@ -33,7 +48,8 @@ class SettingsPage extends StatelessWidget {
     final theme = Theme.of(context);
     final canManage = permissions?.canManageFund ?? false;
     final signOut = onSignOut;
-    final account = email;
+    final accountEmail = email;
+    final rename = onRenameUsername;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -48,12 +64,22 @@ class SettingsPage extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.person_outline),
-                  title: Text(account ?? 'Signed in'),
-                  subtitle: Text(
-                    account == null
-                        ? 'Magic-link session'
-                        : 'Signed in with a magic link',
+                  title: Text('@$username'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (accountEmail != null)
+                        Text(accountEmail, overflow: TextOverflow.ellipsis),
+                      Text(signInProviderLabel(provider)),
+                    ],
                   ),
+                  trailing: rename == null
+                      ? null
+                      : IconButton(
+                          tooltip: 'Change username',
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () => _renameUsername(context, rename),
+                        ),
                 ),
                 if (signOut != null) ...[
                   const Divider(height: 1),
@@ -117,6 +143,17 @@ class SettingsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _renameUsername(
+    BuildContext context,
+    Future<void> Function(String username) rename,
+  ) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) =>
+          RenameUsernameDialog(initialUsername: username, onSave: rename),
     );
   }
 }

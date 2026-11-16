@@ -20,7 +20,13 @@ class _FakeAuthService implements AuthService {
   String? get email => null;
 
   @override
+  String? get provider => null;
+
+  @override
   Stream<bool> get signedInChanges => _changes.stream;
+
+  @override
+  Future<void> signInWithGoogle() async {}
 
   @override
   Future<void> sendMagicLink(String email) async {}
@@ -32,6 +38,18 @@ class _FakeAuthService implements AuthService {
 }
 
 void main() {
+  testWidgets('Google is offered above the email fallback', (tester) async {
+    final service = _FakeAuthService();
+    final auth = AuthController(service);
+    addTearDown(auth.dispose);
+
+    await tester.pumpWidget(MaterialApp(home: SignInPage(auth: auth)));
+
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('or use email'), findsOneWidget);
+    expect(find.text('Send magic link'), findsOneWidget);
+  });
+
   testWidgets('a link that cannot be used says so on the sent screen', (
     tester,
   ) async {

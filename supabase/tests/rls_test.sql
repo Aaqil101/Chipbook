@@ -96,6 +96,13 @@ insert into auth.users (id, email) values
   ('55555555-5555-4555-8555-555555555555', 'wrong@example.com')
 on conflict (id) do nothing;
 
+-- Usernames are public inside a fund. The verified addresses stay in
+-- auth.users and are never returned by the member directory.
+insert into public.profiles (user_id, username) values
+  ('11111111-1111-4111-8111-111111111111', 'organizer'),
+  ('22222222-2222-4222-8222-222222222222', 'member'),
+  ('33333333-3333-4333-8333-333333333333', 'observer');
+
 -- ---------------------------------------------------------------------------
 -- Setup: fund, invites, accepted memberships, and a second fund.
 -- ---------------------------------------------------------------------------
@@ -285,12 +292,12 @@ select pg_temp.assert_eq(
 );
 select pg_temp.assert_eq_text(
   (
-    select email
+    select username
     from public.list_fund_members('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
     where user_id = '22222222-2222-4222-8222-222222222222'
   ),
-  'member@example.com',
-  'member directory exposes email addresses to members'
+  'member',
+  'member directory exposes usernames to members'
 );
 
 reset role;
@@ -334,6 +341,59 @@ select pg_temp.assert_eq(
   )),
   3,
   'member can list fund members'
+);
+
+select pg_temp.assert_eq(
+  (select count(*) from public.profiles),
+  1,
+  'a member reads only their own profile'
+);
+select pg_temp.assert_eq_text(
+  (select username from public.profiles),
+  'member',
+  'a member reads their own username'
+);
+select pg_temp.assert_eq(
+  (
+    select count(*)
+    from public.profiles
+    where user_id = '11111111-1111-4111-8111-111111111111'
+  ),
+  0,
+  'profiles are not directly readable by a co-member'
+);
+
+update public.profiles
+set username = 'member_renamed'
+where user_id = '22222222-2222-4222-8222-222222222222';
+
+select pg_temp.assert_eq_text(
+  (
+    select username
+    from public.profiles
+    where user_id = '22222222-2222-4222-8222-222222222222'
+  ),
+  'member_renamed',
+  'a member can rename their own profile'
+);
+
+update public.profiles
+set username = 'hijacked'
+where user_id = '11111111-1111-4111-8111-111111111111';
+
+select pg_temp.assert_eq(
+  (select count(*) from public.profiles where username = 'hijacked'),
+  0,
+  'a member cannot change another profile'
+);
+
+select pg_temp.assert_raises(
+  $stmt$
+    insert into public.profiles (user_id, username)
+    values ('11111111-1111-4111-8111-111111111111', 'ghost')
+  $stmt$,
+  '42501',
+  'a profile row belongs to its own user'
 );
 
 reset role;
@@ -401,6 +461,25 @@ select pg_temp.assert_eq(
   )),
   0,
   'outsider cannot list fund members'
+);
+
+insert into public.profiles (user_id, username)
+values ('44444444-4444-4444-8444-444444444444', 'outsider');
+
+select pg_temp.assert_eq(
+  (select count(*) from public.profiles),
+  1,
+  'a user can create their own profile'
+);
+
+select pg_temp.assert_raises(
+  $stmt$
+    update public.profiles
+    set username = 'organizer'
+    where user_id = '44444444-4444-4444-8444-444444444444'
+  $stmt$,
+  '23505',
+  'usernames are unique'
 );
 
 reset role;

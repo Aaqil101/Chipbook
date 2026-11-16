@@ -239,6 +239,17 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
+# Templates are also pasted into the hosted dashboard. `db push` does not sync
+# them and this CLI version does not compare them, so keep the dashboard and
+# these files in sync by hand. The paths below feed `supabase start` only.
+[auth.email.template.magic_link]
+subject = "Your Chipbook sign-in link"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.invite]
+subject = "You've been invited to Chipbook"
+content_path = "./supabase/templates/invite.html"
+
 # Use a production-ready SMTP server
 # [auth.email.smtp]
 # enabled = true

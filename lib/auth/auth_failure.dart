@@ -12,7 +12,7 @@ class AuthFailure implements Exception {
   String toString() => message;
 }
 
-/// Explains why a magic link could not be sent.
+/// Explains why a sign-in request could not be made.
 ///
 /// Supabase reports rate limits and rejected addresses as [AuthException].
 /// Those are not connection problems, so keep its message instead of telling
@@ -25,7 +25,7 @@ AuthFailure authFailure(Object error) {
   if (error is AuthException) {
     if (error.statusCode == '429') {
       return AuthFailure(
-        'Too many sign-in emails were requested. '
+        'Too many sign-in attempts were made. '
         'Wait a few minutes and try again.',
         error,
       );
@@ -38,18 +38,18 @@ AuthFailure authFailure(Object error) {
   }
 
   return AuthFailure(
-    'Could not send the link. Check your connection and try again.',
+    'Could not sign in. Check your connection and try again.',
     error,
   );
 }
 
-/// Explains why a magic link could not be used.
+/// Explains why a sign-in could not be completed.
 ///
 /// This arrives on the auth state stream rather than from a call the UI makes,
 /// and the raw text is usually about PKCE internals the user cannot act on.
-AuthFailure linkFailure(Object error) {
+AuthFailure signInFailure(Object error) {
   if (kDebugMode) {
-    debugPrint('magic link failed: $error');
+    debugPrint('sign-in failed: $error');
   }
 
   if (error is AuthException) {
@@ -57,21 +57,18 @@ AuthFailure linkFailure(Object error) {
 
     if (error.code == 'otp_expired' || message.contains('expired')) {
       return AuthFailure(
-        'That link has expired or was already used. Send a new one.',
+        'That sign-in link has expired or was already used. Send a new one.',
         error,
       );
     }
 
     if (message.contains('code verifier')) {
       return AuthFailure(
-        'That link cannot be used on this device. Send a new one.',
+        'That sign-in link cannot be used on this device. Send a new one.',
         error,
       );
     }
   }
 
-  return AuthFailure(
-    'Could not sign in with that link. Send a new one.',
-    error,
-  );
+  return AuthFailure('Could not sign in. Try again.', error);
 }

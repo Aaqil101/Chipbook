@@ -92,6 +92,6 @@ Membership parseMemberDirectoryRow(Map<String, dynamic> row, String fundId) {
     userId: row['user_id'] as String,
     role: MemberRole.fromCode(row['role'] as String),
     createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
-    email: row['email'] as String?,
+    username: row['username'] as String? ?? '',
   );
 }

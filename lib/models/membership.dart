@@ -7,7 +7,7 @@ class Membership {
     required this.userId,
     required this.role,
     required this.createdAt,
-    this.email,
+    required this.username,
   });
 
   final String fundId;
@@ -15,12 +15,14 @@ class Membership {
   final MemberRole role;
   final DateTime createdAt;
 
-  /// Email address from the auth directory, when the backend provides it.
-  final String? email;
+  /// The handle the user chose, as returned by the member directory.
+  ///
+  /// Empty when the user has not set a profile yet.
+  final String username;
 
   /// Name to show in the member list.
   String get displayName {
-    final value = email?.trim() ?? '';
+    final value = username.trim();
     return value.isEmpty ? userId : value;
   }
 }

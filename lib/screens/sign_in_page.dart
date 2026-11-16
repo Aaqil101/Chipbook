@@ -5,7 +5,7 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_failure.dart';
 import '../domain/auth_validation.dart';
 
-/// Sends an email magic link and waits for the session to appear.
+/// Signs in with Google, or falls back to an email magic link.
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key, required this.auth});
 
@@ -19,6 +19,7 @@ class _SignInPageState extends State<SignInPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _sending = false;
+  bool _openingGoogle = false;
   bool _sent = false;
   String? _error;
 
@@ -26,6 +27,33 @@ class _SignInPageState extends State<SignInPage> {
   void dispose() {
     _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _openingGoogle = true;
+      _error = null;
+    });
+
+    try {
+      await widget.auth.signInWithGoogle();
+    } on AuthFailure catch (failure) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = failure.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(
+        () => _error = 'Could not sign in with Google. Check your connection and try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingGoogle = false);
+      }
+    }
   }
 
   Future<void> _send() async {
@@ -87,6 +115,8 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Widget _signInForm(BuildContext context, ThemeData theme, String? error) {
+    final busy = _sending || _openingGoogle;
+
     return Form(
       key: _formKey,
       child: Column(
@@ -106,9 +136,31 @@ class _SignInPageState extends State<SignInPage> {
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
+          OutlinedButton.icon(
+            onPressed: busy ? null : _signInWithGoogle,
+            icon: _openingGoogle
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.login),
+            label: const Text('Continue with Google'),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text('or use email', style: theme.textTheme.bodySmall),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 20),
           TextFormField(
             controller: _emailController,
-            autofocus: true,
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.email],
             textInputAction: TextInputAction.done,
@@ -125,7 +177,7 @@ class _SignInPageState extends State<SignInPage> {
           ],
           const SizedBox(height: 20),
           FilledButton(
-            onPressed: _sending ? null : _send,
+            onPressed: busy ? null : _send,
             child: _sending
                 ? const SizedBox(
                     height: 20,
@@ -136,7 +188,8 @@ class _SignInPageState extends State<SignInPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'We email you a one-time link. No password needed.',
+            'We email you a one-time link. No password needed. '
+            'Check your spam folder if it does not arrive.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall,
           ),
@@ -165,6 +218,12 @@ class _SignInPageState extends State<SignInPage> {
           'We sent a sign-in link to ${_emailController.text.trim()}.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'It may take a minute. Check your spam folder if it is missing.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall,
         ),
         if (error != null) ...[
           const SizedBox(height: 16),

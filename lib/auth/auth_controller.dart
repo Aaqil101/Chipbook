@@ -21,15 +21,22 @@ class AuthController extends ChangeNotifier {
 
   bool get isSignedIn => _isSignedIn;
 
-  /// Why the last magic link could not be used, or null when there is none.
+  /// Why the last sign-in could not be completed, or null when there is none.
   ///
-  /// A link that fails is not a session change, so it is reported here for the
+  /// A failed link is not a session change, so it is reported here for the
   /// sign-in screen instead of being left as an unhandled stream error.
   AuthFailure? get failure => _failure;
 
   String? get userId => _service.userId;
 
   String? get email => _service.email;
+
+  String? get provider => _service.provider;
+
+  Future<void> signInWithGoogle() {
+    clearFailure();
+    return _service.signInWithGoogle();
+  }
 
   Future<void> sendMagicLink(String email) {
     clearFailure();
@@ -59,7 +66,7 @@ class AuthController extends ChangeNotifier {
   }
 
   void _handleError(Object error, StackTrace stackTrace) {
-    _failure = linkFailure(error);
+    _failure = signInFailure(error);
     notifyListeners();
   }
 
