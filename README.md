@@ -331,8 +331,14 @@ has no Flutter SDK, then uploaded as a prebuilt deployment.
    `gh secret set` prompts for each value, so no secret is pasted into a
    tracked file or the workflow itself.
 
-4. Push to `master`, or run **Deploy web** from the Actions tab. The job
-   summary prints the production URL.
+4. Push to `master` to deploy production. To run the workflow by hand, open
+   **Deploy web** in the Actions tab and pick a **target**: **preview** (the
+   default) uploads the same build to a throwaway URL and leaves the live site
+   alone, while **production** redeploys the branch you selected. The job
+   summary prints the target and URL.
+
+Preview deployments sit behind Vercel Authentication, so opening one in a
+browser asks you to sign in to Vercel.
 
 Because the Supabase values are compiled into the bundle, changing either
 secret needs a new deployment rather than a secret edit alone. The workflow

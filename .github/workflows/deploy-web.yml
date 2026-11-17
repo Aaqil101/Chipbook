@@ -4,10 +4,16 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      target:
+        description: Where to deploy
+        type: choice
+        options: [preview, production]
+        default: preview
 
-# Never run two production deploys at once; queue the newer one instead.
+# Never run two deploys of the same target at once; queue the newer one.
 concurrency:
-  group: deploy-web
+  group: deploy-web-${{ inputs.target || 'production' }}
   cancel-in-progress: false
 
 permissions:
@@ -28,6 +34,7 @@ jobs:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      TARGET: ${{ inputs.target || 'production' }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -76,7 +83,7 @@ jobs:
       # Fails loudly when the token, org ID, or project ID is wrong, before
       # anything is deployed.
       - name: Link the Vercel project
-        run: vercel pull --yes --environment=production
+        run: vercel pull --yes --environment="$TARGET"
 
       - name: Stage the build output
         run: |
@@ -88,18 +95,22 @@ jobs:
           cp -R build/web/. .vercel/output/static/
           printf '{"version":3}\n' > .vercel/output/config.json
 
-      - name: Deploy to production
+      - name: Deploy
         id: deploy
         run: |
-          output="$(vercel deploy --prebuilt --prod --yes)"
+          args=(--prebuilt --yes)
+          if [ "$TARGET" = "production" ]; then
+            args+=(--prod)
+          fi
+          output="$(vercel deploy "${args[@]}")"
           printf '%s\n' "$output"
           url="$(printf '%s\n' "$output" | grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' | tail -n 1)"
           if [ -n "$url" ]; then
             echo "url=$url" >> "$GITHUB_OUTPUT"
-            echo "Deployed $url to production." >> "$GITHUB_STEP_SUMMARY"
+            echo "Deployed $url to $TARGET." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "::warning::Deployment finished but no URL was found in the output"
           fi
 
-      - name: Report the deployment URL
-        run: 'echo "Production: ${{ steps.deploy.outputs.url }}"'
+      - name: Report the deployment
+        run: 'echo "$TARGET: ${{ steps.deploy.outputs.url }}"'
