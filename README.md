@@ -296,6 +296,48 @@ Only the publishable key belongs in a client build. Never add a
 `service_role`/secret key, database password, or personal access token to
 `.env`, `--dart-define`, or any file tracked by git.
 
+### Deploy from CI
+
+`.github/workflows/deploy-web.yml` builds and deploys `build/web` to Vercel on
+every push to `master`, and on demand from the **Actions** tab. It runs
+`flutter analyze` and `flutter test` first, so a failing commit never reaches
+the host. The bundle is built on the GitHub runner because Vercel's build image
+has no Flutter SDK, then uploaded as a prebuilt deployment.
+
+1. Link this checkout to the Vercel project once:
+
+   ```powershell
+   npx vercel link
+   ```
+
+   It writes `.vercel/project.json`, which is gitignored, with the org and
+   project IDs. Keep the project's **Framework Preset** on **Other** with no
+   build command, since the workflow supplies the files.
+
+2. Create a token at <https://vercel.com/account/tokens> that can deploy the
+   project's team.
+
+3. Add the repository secrets. The two Supabase values must match `.env`, and
+   the IDs are the ones in `.vercel/project.json`:
+
+   ```powershell
+   gh secret set VERCEL_TOKEN
+   gh secret set VERCEL_ORG_ID
+   gh secret set VERCEL_PROJECT_ID
+   gh secret set SUPABASE_URL
+   gh secret set SUPABASE_PUBLISHABLE_KEY
+   ```
+
+   `gh secret set` prompts for each value, so no secret is pasted into a
+   tracked file or the workflow itself.
+
+4. Push to `master`, or run **Deploy web** from the Actions tab. The job
+   summary prints the production URL.
+
+Because the Supabase values are compiled into the bundle, changing either
+secret needs a new deployment rather than a secret edit alone. The workflow
+fails before deploying when the token, org ID, or project ID is wrong.
+
 ## How it works
 
 - `lib/models/` — `Entry`, `Fund`, `Membership`, `Invite`, `MemberRole`, and

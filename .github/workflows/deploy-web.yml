@@ -1,0 +1,105 @@
+name: Deploy web
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Never run two production deploys at once; queue the newer one instead.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.50.0
+  VERCEL_CLI_VERSION: 65.16.0
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # A missing secret still produces a build, so catch it here instead of
+      # shipping an app that only shows the missing-configuration screen.
+      - name: Check the required secrets
+        run: |
+          missing=0
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID SUPABASE_URL SUPABASE_PUBLISHABLE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      # Vercel's build image has no Flutter SDK, so the bundle is built here and
+      # uploaded as a prebuilt deployment. The Supabase values are compiled into
+      # the bundle, so a changed value needs a new deployment, not a rebuild.
+      - name: Build web
+        run: |
+          flutter build web --release \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
+
+      # Fails loudly when the token, org ID, or project ID is wrong, before
+      # anything is deployed.
+      - name: Link the Vercel project
+        run: vercel pull --yes --environment=production
+
+      - name: Stage the build output
+        run: |
+          test -f build/web/index.html || {
+            echo "::error::No web build output at build/web"
+            exit 1
+          }
+          mkdir -p .vercel/output/static
+          cp -R build/web/. .vercel/output/static/
+          printf '{"version":3}\n' > .vercel/output/config.json
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          output="$(vercel deploy --prebuilt --prod --yes)"
+          printf '%s\n' "$output"
+          url="$(printf '%s\n' "$output" | grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' | tail -n 1)"
+          if [ -n "$url" ]; then
+            echo "url=$url" >> "$GITHUB_OUTPUT"
+            echo "Deployed $url to production." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Deployment finished but no URL was found in the output"
+          fi
+
+      - name: Report the deployment URL
+        run: 'echo "Production: ${{ steps.deploy.outputs.url }}"'
