@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Teal launch screen with the app glyph, matching the web splash. -->
+<!-- Light launch screen with the app icon, matching the web and Flutter splash. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/ic_launcher_foreground" />
+            android:src="@drawable/splash_icon" />
     </item>
 </layer-list>
