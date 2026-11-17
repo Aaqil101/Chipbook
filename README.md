@@ -235,6 +235,16 @@ somewhere durable.
    be restored. **Settings** also shows the signed-in account, lets you change
    your username, and holds sign out and the **About** page.
 
+## Troubleshooting
+
+### Clicks do nothing on the web
+
+Flutter web draws the app into a canvas, so browser extensions that intercept
+pointer events can swallow a click before the app sees it. Vimium is a known
+case: the sign-in field ignores mouse clicks until the site is excluded. Add
+the app's origin to the extension's exclusions or disable it for the site, then
+reload. The app needs no change.
+
 ## Test it
 
 ```powershell
