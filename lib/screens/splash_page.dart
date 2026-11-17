@@ -161,31 +161,40 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               );
             },
           ),
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x2E004D44),
-                  blurRadius: 34,
-                  offset: Offset(0, 18),
+          AnimatedBuilder(
+            animation: _glow,
+            builder: (context, child) {
+              final value = animated
+                  ? Curves.easeInOut.transform(_glow.value)
+                  : 0.5;
+              return Transform.scale(scale: 1 + 0.035 * value, child: child);
+            },
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x2E004D44),
+                    blurRadius: 34,
+                    offset: Offset(0, 18),
+                  ),
+                  BoxShadow(
+                    color: Color(0x1A004D44),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  'assets/app_icon.png',
+                  width: 96,
+                  height: 96,
+                  fit: BoxFit.cover,
                 ),
-                BoxShadow(
-                  color: Color(0x1A004D44),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Image.asset(
-                'assets/app_icon.png',
-                width: 96,
-                height: 96,
-                fit: BoxFit.cover,
               ),
             ),
           ),

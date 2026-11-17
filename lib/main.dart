@@ -68,7 +68,7 @@ class _StartupApp extends StatefulWidget {
 
 class _StartupAppState extends State<_StartupApp> {
   /// Long enough for the splash animation to read as deliberate.
-  static const _minimumSplash = Duration(milliseconds: 900);
+  static const _minimumSplash = Duration(milliseconds: 1800);
 
   AuthController? _auth;
   FundRepository? _fundRepository;
