@@ -30,7 +30,7 @@ jobs:
       SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # A missing secret still produces a build, so catch it here instead of
       # shipping an app that only shows the missing-configuration screen.
