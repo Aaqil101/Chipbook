@@ -62,15 +62,15 @@
       position: fixed;
       inset: 0;
       z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
       overflow: hidden;
-      background-color: #00695C;
+      background:
+        radial-gradient(120% 120% at 50% 12%, #0A7A6C 0%, #00695C 48%, #00443D 100%);
       color: #FFFFFF;
       text-align: center;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      transition: opacity 400ms ease, visibility 400ms ease;
+      transition: opacity 420ms ease, visibility 420ms ease;
     }
 
     .splash.is-hidden {
@@ -79,110 +79,352 @@
       pointer-events: none;
     }
 
+    /* Slow-drifting colour blobs keep the background alive. */
+    .splash__aurora {
+      position: absolute;
+      inset: -15%;
+      z-index: 0;
+      background:
+        radial-gradient(38% 38% at 18% 24%, rgba(38, 166, 154, 0.55), rgba(38, 166, 154, 0) 70%),
+        radial-gradient(32% 32% at 84% 28%, rgba(167, 255, 235, 0.18), rgba(167, 255, 235, 0) 70%),
+        radial-gradient(46% 46% at 62% 90%, rgba(0, 137, 123, 0.65), rgba(0, 137, 123, 0) 72%);
+      animation: splash-drift 18s ease-in-out infinite alternate;
+    }
+
+    /* Rising chip outlines, a nod to the ledger's money chips. */
+    .splash__chips {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .chip {
+      position: absolute;
+      bottom: -18vh;
+      width: 14px;
+      height: 14px;
+      border: 1.5px dashed rgba(255, 255, 255, 0.22);
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.04);
+      animation: chip-rise 15s linear infinite;
+    }
+
+    .chip--1 {
+      left: 7%;
+      width: 18px;
+      height: 18px;
+      --drift: 34px;
+      animation-duration: 17s;
+      animation-delay: -3s;
+    }
+
+    .chip--2 {
+      left: 19%;
+      width: 11px;
+      height: 11px;
+      --drift: -22px;
+      animation-duration: 13s;
+      animation-delay: -7s;
+    }
+
+    .chip--3 {
+      left: 31%;
+      width: 22px;
+      height: 22px;
+      --drift: 18px;
+      animation-duration: 19s;
+      animation-delay: -11s;
+    }
+
+    .chip--4 {
+      left: 46%;
+      width: 13px;
+      height: 13px;
+      --drift: -30px;
+      animation-duration: 14s;
+      animation-delay: -1s;
+    }
+
+    .chip--5 {
+      left: 63%;
+      width: 17px;
+      height: 17px;
+      --drift: 26px;
+      animation-duration: 16s;
+      animation-delay: -9s;
+    }
+
+    .chip--6 {
+      left: 78%;
+      width: 12px;
+      height: 12px;
+      --drift: -16px;
+      animation-duration: 12s;
+      animation-delay: -5s;
+    }
+
+    .chip--7 {
+      left: 90%;
+      width: 20px;
+      height: 20px;
+      --drift: 24px;
+      animation-duration: 18s;
+      animation-delay: -13s;
+    }
+
+    /* Vignette keeps the eye on the mark. */
+    .splash::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(120% 120% at 50% 50%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.3) 100%);
+    }
+
     .splash__content {
+      position: relative;
+      z-index: 2;
       display: flex;
       flex-direction: column;
       align-items: center;
+      max-width: 24rem;
       padding: 24px;
+      transition: transform 420ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .splash.is-hidden .splash__content {
+      transform: scale(1.06);
     }
 
     .splash__mark {
       position: relative;
+      width: 140px;
+      height: 140px;
+      margin-bottom: 26px;
+      animation: splash-pop 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .splash__halo,
+    .splash__ring,
+    .splash__orbit,
+    .splash__icon-wrap {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+    }
+
+    .splash__halo {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle,
+        rgba(167, 255, 235, 0.3) 0%,
+        rgba(167, 255, 235, 0.08) 46%,
+        rgba(167, 255, 235, 0) 70%
+      );
+      animation: splash-halo 3.8s ease-in-out infinite;
+    }
+
+    .splash__ring {
+      width: 104px;
+      height: 104px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 28px;
+      animation: splash-ripple 3.8s ease-out infinite;
+    }
+
+    .splash__ring--late {
+      animation-delay: 1.9s;
+    }
+
+    /* A single highlight orbits the mark. */
+    .splash__orbit {
+      width: 140px;
+      height: 140px;
+      animation: splash-spin 7s linear infinite;
+    }
+
+    .splash__orbit::before {
+      content: "";
+      position: absolute;
+      top: -3px;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      margin-left: -3px;
+      border-radius: 50%;
+      background-color: #A7FFEB;
+      box-shadow: 0 0 12px 2px rgba(167, 255, 235, 0.8);
+    }
+
+    .splash__icon-wrap {
       display: grid;
       place-items: center;
       width: 96px;
       height: 96px;
-      margin-bottom: 20px;
+      animation: splash-bob 3.8s ease-in-out infinite;
     }
 
     /* The icon background is the same teal, so only the hand-heart shows. */
     .splash__icon {
-      width: 88px;
-      height: 88px;
-      animation: splash-float 3.2s ease-in-out infinite;
-    }
-
-    .splash__ring {
-      position: absolute;
-      inset: 0;
-      border: 2px solid rgba(255, 255, 255, 0.35);
-      border-radius: 28px;
-      animation: splash-ripple 3.2s ease-out infinite;
-    }
-
-    .splash__ring--late {
-      animation-delay: 1.6s;
+      display: block;
+      width: 92px;
+      height: 92px;
     }
 
     .splash__name {
       margin: 0;
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
+      font-size: clamp(30px, 6vw, 38px);
+      font-weight: 800;
+      letter-spacing: 0.055em;
+      background: linear-gradient(
+        100deg,
+        #FFFFFF 0%,
+        #A7FFEB 34%,
+        #FFFFFF 58%,
+        #A7FFEB 86%,
+        #FFFFFF 100%
+      );
+      background-size: 260% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      animation:
+        splash-rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) 120ms both,
+        splash-shimmer 5s ease-in-out 1s infinite;
     }
 
     .splash__tagline {
-      margin: 8px 0 0;
-      font-size: 14px;
-      opacity: 0.85;
+      margin: 10px 0 0;
+      font-size: 15px;
+      line-height: 1.4;
+      color: rgba(255, 255, 255, 0.82);
+      animation: splash-rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) 220ms both;
     }
 
     .splash__sweep {
-      width: 132px;
-      height: 3px;
-      margin-top: 22px;
+      position: relative;
+      width: 168px;
+      height: 4px;
+      margin-top: 26px;
       overflow: hidden;
-      border-radius: 2px;
-      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      background-color: rgba(255, 255, 255, 0.14);
+      animation: splash-rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) 320ms both;
     }
 
     .splash__sweep span {
-      display: block;
-      width: 40%;
-      height: 100%;
-      border-radius: 2px;
-      background-color: #FFFFFF;
-      animation: splash-sweep 1.6s ease-in-out infinite;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 46%;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        rgba(167, 255, 235, 0) 0%,
+        #A7FFEB 40%,
+        #FFFFFF 50%,
+        #A7FFEB 60%,
+        rgba(167, 255, 235, 0) 100%
+      );
+      box-shadow: 0 0 12px rgba(167, 255, 235, 0.7);
+      animation: splash-sweep 1.8s cubic-bezier(0.55, 0, 0.45, 1) infinite;
     }
 
     .splash__status {
-      margin: 12px 0 0;
-      font-size: 12px;
-      letter-spacing: 0.14em;
+      margin: 14px 0 0;
+      font-size: 11px;
+      letter-spacing: 0.24em;
       text-transform: uppercase;
-      opacity: 0.7;
+      color: rgba(255, 255, 255, 0.55);
+      animation: splash-rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) 420ms both;
     }
 
-    @keyframes splash-float {
+    @keyframes splash-drift {
+      0% { transform: translate3d(-2%, -1.5%, 0) scale(1.02); }
+      100% { transform: translate3d(2.5%, 2%, 0) scale(1.12); }
+    }
+
+    @keyframes chip-rise {
+      0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+      10% { opacity: 0.9; }
+      85% { opacity: 0.5; }
+      100% {
+        transform: translate3d(var(--drift, 0px), -118vh, 0) rotate(220deg);
+        opacity: 0;
+      }
+    }
+
+    @keyframes splash-pop {
+      0% { opacity: 0; transform: scale(0.72); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes splash-rise {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes splash-bob {
       0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
+      50% { transform: translateY(-7px); }
     }
 
     @keyframes splash-ripple {
-      0% { transform: scale(0.9); opacity: 0; }
-      30% { opacity: 0.8; }
-      100% { transform: scale(1.5); opacity: 0; }
+      0% { transform: scale(0.82); opacity: 0; }
+      18% { opacity: 0.85; }
+      100% { transform: scale(1.65); opacity: 0; }
+    }
+
+    @keyframes splash-halo {
+      0%, 100% { transform: scale(0.95); opacity: 0.55; }
+      50% { transform: scale(1.08); opacity: 0.9; }
+    }
+
+    @keyframes splash-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes splash-shimmer {
+      0% { background-position: 160% 50%; }
+      100% { background-position: -60% 50%; }
     }
 
     @keyframes splash-sweep {
-      0% { transform: translateX(-120%); }
+      0% { transform: translateX(-130%); }
       100% { transform: translateX(320%); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .splash__icon,
+      .splash__aurora,
+      .splash__chips,
+      .chip,
+      .splash__halo,
       .splash__ring,
-      .splash__sweep span {
+      .splash__orbit,
+      .splash__icon-wrap,
+      .splash__mark,
+      .splash__name,
+      .splash__tagline,
+      .splash__sweep,
+      .splash__sweep span,
+      .splash__status {
         animation: none;
       }
 
-      .splash__ring {
-        opacity: 0.35;
-        transform: none;
+      .splash__name {
+        background: none;
+        color: #FFFFFF;
+        -webkit-text-fill-color: #FFFFFF;
       }
 
-      .splash__sweep span {
-        width: 100%;
+      .splash__ring {
+        opacity: 0.3;
       }
     }
   </style>
@@ -195,17 +437,32 @@
     aria-live="polite"
     aria-label="Loading Chipbook"
   >
+    <div class="splash__aurora" aria-hidden="true"></div>
+    <div class="splash__chips" aria-hidden="true">
+      <span class="chip chip--1"></span>
+      <span class="chip chip--2"></span>
+      <span class="chip chip--3"></span>
+      <span class="chip chip--4"></span>
+      <span class="chip chip--5"></span>
+      <span class="chip chip--6"></span>
+      <span class="chip chip--7"></span>
+    </div>
+
     <div class="splash__content">
       <div class="splash__mark" aria-hidden="true">
+        <span class="splash__halo"></span>
         <span class="splash__ring"></span>
         <span class="splash__ring splash__ring--late"></span>
-        <img
-          class="splash__icon"
-          src="icons/Icon-192.png"
-          alt=""
-          width="88"
-          height="88"
-        >
+        <span class="splash__orbit"></span>
+        <span class="splash__icon-wrap">
+          <img
+            class="splash__icon"
+            src="icons/Icon-192.png"
+            alt=""
+            width="92"
+            height="92"
+          >
+        </span>
       </div>
       <p class="splash__name">Chipbook</p>
       <p class="splash__tagline">A shared ledger for group fundraising.</p>
@@ -243,7 +500,7 @@
 
         splash.addEventListener('transitionend', remove, { once: true });
         // transitionend does not fire when the tab is in the background.
-        setTimeout(remove, 600);
+        setTimeout(remove, 650);
       }
 
       window.addEventListener('flutter-first-frame', hide, { once: true });
