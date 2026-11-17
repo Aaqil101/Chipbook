@@ -20,6 +20,9 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A shared ledger for group fundraising.">
   <meta name="theme-color" content="#00695C">
+  <meta name="color-scheme" content="light">
+  <!-- Dark Reader and similar extensions otherwise invert this light page. -->
+  <meta name="darkreader-lock">
 
   <!--
     Uncomment the tag below to lay the app out underneath the parts of the
@@ -58,6 +61,7 @@
       margin: 0;
       height: 100%;
       background-color: #F4FBF8;
+      color-scheme: light;
     }
 
     .splash {
@@ -79,21 +83,6 @@
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
-    }
-
-    /* A soft teal spotlight behind the mark. */
-    .splash__glow {
-      position: absolute;
-      width: min(70vw, 520px);
-      aspect-ratio: 1;
-      border-radius: 50%;
-      background: radial-gradient(
-        circle,
-        rgba(0, 105, 92, 0.14) 0%,
-        rgba(0, 105, 92, 0.05) 45%,
-        rgba(0, 105, 92, 0) 68%
-      );
-      animation: splash-breathe 7s ease-in-out infinite;
     }
 
     .splash__content {
@@ -169,11 +158,6 @@
       animation: splash-rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 320ms both;
     }
 
-    @keyframes splash-breathe {
-      0%, 100% { transform: scale(0.94); opacity: 0.7; }
-      50% { transform: scale(1.04); opacity: 1; }
-    }
-
     @keyframes splash-pop {
       0% { opacity: 0; transform: scale(0.86); }
       100% { opacity: 1; transform: scale(1); }
@@ -199,7 +183,6 @@
       and out, so the screen never looks frozen while the bundle downloads.
     */
     @media (prefers-reduced-motion: reduce) {
-      .splash__glow,
       .splash__icon,
       .splash__name,
       .splash__tagline,
@@ -231,7 +214,6 @@
     aria-live="polite"
     aria-label="Loading Chipbook"
   >
-    <div class="splash__glow" aria-hidden="true"></div>
     <div class="splash__content">
       <img
         class="splash__icon"
