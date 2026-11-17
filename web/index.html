@@ -44,8 +44,212 @@
 
   <title>Chipbook</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    The splash paints before Flutter or CanvasKit has loaded, so a cold start
+    is branded instead of blank. The colours match web/manifest.json and
+    AppInfo.name/tagline match lib/app_info.dart.
+  -->
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      background-color: #00695C;
+    }
+
+    .splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background-color: #00695C;
+      color: #FFFFFF;
+      text-align: center;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      transition: opacity 400ms ease, visibility 400ms ease;
+    }
+
+    .splash.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash__content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .splash__mark {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 96px;
+      height: 96px;
+      margin-bottom: 20px;
+    }
+
+    /* The icon background is the same teal, so only the hand-heart shows. */
+    .splash__icon {
+      width: 88px;
+      height: 88px;
+      animation: splash-float 3.2s ease-in-out infinite;
+    }
+
+    .splash__ring {
+      position: absolute;
+      inset: 0;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-radius: 28px;
+      animation: splash-ripple 3.2s ease-out infinite;
+    }
+
+    .splash__ring--late {
+      animation-delay: 1.6s;
+    }
+
+    .splash__name {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .splash__tagline {
+      margin: 8px 0 0;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    .splash__sweep {
+      width: 132px;
+      height: 3px;
+      margin-top: 22px;
+      overflow: hidden;
+      border-radius: 2px;
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .splash__sweep span {
+      display: block;
+      width: 40%;
+      height: 100%;
+      border-radius: 2px;
+      background-color: #FFFFFF;
+      animation: splash-sweep 1.6s ease-in-out infinite;
+    }
+
+    .splash__status {
+      margin: 12px 0 0;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    @keyframes splash-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    @keyframes splash-ripple {
+      0% { transform: scale(0.9); opacity: 0; }
+      30% { opacity: 0.8; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    @keyframes splash-sweep {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(320%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .splash__icon,
+      .splash__ring,
+      .splash__sweep span {
+        animation: none;
+      }
+
+      .splash__ring {
+        opacity: 0.35;
+        transform: none;
+      }
+
+      .splash__sweep span {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div
+    id="splash"
+    class="splash"
+    role="status"
+    aria-live="polite"
+    aria-label="Loading Chipbook"
+  >
+    <div class="splash__content">
+      <div class="splash__mark" aria-hidden="true">
+        <span class="splash__ring"></span>
+        <span class="splash__ring splash__ring--late"></span>
+        <img
+          class="splash__icon"
+          src="icons/Icon-192.png"
+          alt=""
+          width="88"
+          height="88"
+        >
+      </div>
+      <p class="splash__name">Chipbook</p>
+      <p class="splash__tagline">A shared ledger for group fundraising.</p>
+      <div class="splash__sweep" aria-hidden="true"><span></span></div>
+      <p class="splash__status">Loading…</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var splash = document.getElementById('splash');
+      if (!splash) {
+        return;
+      }
+
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+        .matches;
+
+      function remove() {
+        if (splash.parentNode) {
+          splash.parentNode.removeChild(splash);
+        }
+      }
+
+      function hide() {
+        if (splash.classList.contains('is-hidden')) {
+          return;
+        }
+
+        splash.classList.add('is-hidden');
+        if (reduceMotion) {
+          remove();
+          return;
+        }
+
+        splash.addEventListener('transitionend', remove, { once: true });
+        // transitionend does not fire when the tab is in the background.
+        setTimeout(remove, 600);
+      }
+
+      window.addEventListener('flutter-first-frame', hide, { once: true });
+    })();
+  </script>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
