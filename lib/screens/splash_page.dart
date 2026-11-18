@@ -59,15 +59,15 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final animated = _animated ?? true;
     final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
     final surface = scheme.surface;
-    final highlight = Color.alphaBlend(
-      scheme.primary.withValues(alpha: 0.05),
-      surface,
-    );
-    final edge = Color.alphaBlend(
-      scheme.primary.withValues(alpha: 0.12),
-      surface,
-    );
+    // Dark mode keeps the vignette neutral instead of tinting it green.
+    final highlight = isDark
+        ? scheme.surfaceContainerLow
+        : Color.alphaBlend(scheme.primary.withValues(alpha: 0.05), surface);
+    final edge = isDark
+        ? scheme.surfaceContainerLowest
+        : Color.alphaBlend(scheme.primary.withValues(alpha: 0.12), surface);
 
     return Scaffold(
       backgroundColor: surface,
@@ -144,8 +144,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   Widget _mark(bool animated, ColorScheme scheme) {
     final isDark = scheme.brightness == Brightness.dark;
-    final shadow = Colors.black.withValues(alpha: isDark ? 0.5 : 0.18);
-    final softShadow = Colors.black.withValues(alpha: isDark ? 0.32 : 0.1);
+    final glow = scheme.primary.withValues(alpha: isDark ? 0.3 : 0.16);
+    final shadow = Colors.black.withValues(alpha: isDark ? 0.55 : 0.18);
+    final softShadow = Colors.black.withValues(alpha: isDark ? 0.35 : 0.1);
 
     return SizedBox(
       width: 160,
@@ -167,7 +168,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      scheme.primary.withValues(alpha: 0.2),
+                      scheme.primary.withValues(alpha: isDark ? 0.28 : 0.2),
                       scheme.primary.withValues(alpha: 0),
                     ],
                   ),
@@ -189,6 +190,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
+                  BoxShadow(color: glow, blurRadius: 42, spreadRadius: 2),
                   BoxShadow(
                     color: shadow,
                     blurRadius: 34,

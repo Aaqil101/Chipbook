@@ -163,32 +163,33 @@
        a dark Flutter frame does not flash a light splash. */
     html[data-theme="dark"],
     html[data-theme="dark"] body {
-      background-color: #0E1513;
+      background-color: #111315;
     }
 
     html[data-theme="dark"] .splash {
       background:
-        radial-gradient(90% 70% at 50% 24%, #141F1C 0%, #0E1513 52%, #1C2C29 100%);
-      color: #DDE4E1;
+        radial-gradient(90% 70% at 50% 24%, #191C1E 0%, #111315 52%, #0B0D0F 100%);
+      color: #E5E7E7;
     }
 
     html[data-theme="dark"] .splash__icon {
       box-shadow:
+        0 0 42px rgba(130, 213, 200, 0.3),
         0 18px 34px rgba(0, 0, 0, 0.55),
         0 2px 6px rgba(0, 0, 0, 0.35);
     }
 
     html[data-theme="dark"] .splash__name {
-      color: #DDE4E1;
+      color: #E5E7E7;
     }
 
     html[data-theme="dark"] .splash__tagline,
     html[data-theme="dark"] .splash__status {
-      color: #BEC9C6;
+      color: #B6BABA;
     }
 
     html[data-theme="dark"] .splash__track {
-      background-color: rgba(130, 213, 200, 0.12);
+      background-color: rgba(229, 231, 231, 0.12);
     }
 
     html[data-theme="dark"] .splash__bar {
@@ -211,7 +212,7 @@
     }
 
     @keyframes splash-pulse {
-      0%, 100% { opacity: 0.3; }
+      0%, 100% { opacity: 0.7; }
       50% { opacity: 1; }
     }
 
@@ -259,6 +260,10 @@
         // No saved choice or unreadable storage: follow the system.
       }
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      var themeColor = document.querySelector('meta[name="theme-color"]');
+      if (themeColor) {
+        themeColor.setAttribute('content', dark ? '#111315' : '#00695C');
+      }
     })();
   </script>
 </head>
