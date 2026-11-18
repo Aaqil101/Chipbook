@@ -18,7 +18,9 @@ import 'package:chipbook/repositories/entry_repository.dart';
 import 'package:chipbook/repositories/fund_repository.dart';
 import 'package:chipbook/repositories/invite_repository.dart';
 import 'package:chipbook/repositories/membership_repository.dart';
+import 'package:chipbook/repositories/preference_store.dart';
 import 'package:chipbook/repositories/profile_repository.dart';
+import 'package:chipbook/state/theme_controller.dart';
 
 void main() {
   testWidgets('signed-out users see the sign-in screen', (tester) async {
@@ -29,6 +31,7 @@ void main() {
 
     await tester.pumpWidget(
       ChipbookApp(
+        themes: _themes(),
         auth: auth,
         fundRepository: FakeFundRepository(),
         entryRepository: InMemoryEntryRepository(),
@@ -104,7 +107,7 @@ void main() {
 
     await _openSettings(tester);
     final about = find.text('About ${AppInfo.name}');
-    await tester.ensureVisible(about);
+    await tester.scrollUntilVisible(about, 200);
     await tester.pumpAndSettle();
     await tester.tap(about);
     await tester.pumpAndSettle();
@@ -253,6 +256,7 @@ void main() {
 
     await tester.pumpWidget(
       ChipbookApp(
+        themes: _themes(),
         auth: auth,
         fundRepository: FakeFundRepository(),
         entryRepository: InMemoryEntryRepository(),
@@ -1095,6 +1099,69 @@ void main() {
     expect(find.text('This month'), findsOneWidget);
     expect(find.text('of USD 500.00 · 0% of target'), findsOneWidget);
   });
+
+  testWidgets('appearance selector repaints and saves the choice', (
+    tester,
+  ) async {
+    final stored = <String, String>{};
+    final themes = ThemeController(_FakePreferenceStore(stored));
+    addTearDown(themes.dispose);
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      themes: themes,
+      openLedger: false,
+    );
+
+    await _openSettings(tester);
+    final appearance = find.text('Appearance');
+    await tester.scrollUntilVisible(appearance, 200);
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.check), findsOneWidget);
+
+    final dark = find.text('Dark');
+    await tester.scrollUntilVisible(dark, 200);
+    await tester.tap(dark);
+    await tester.pumpAndSettle();
+
+    expect(themes.themeMode, ThemeMode.dark);
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.dark,
+    );
+    expect(
+      Theme.of(tester.element(find.text('Appearance'))).brightness,
+      Brightness.dark,
+    );
+    expect(stored[ThemeController.storageKey], 'dark');
+  });
+
+  testWidgets('system appearance follows the platform brightness live', (
+    tester,
+  ) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await _pumpSignedIn(
+      tester,
+      funds: [_fund('fund-a', 'Trip fund')],
+      openLedger: false,
+    );
+
+    expect(
+      Theme.of(tester.element(find.text('Funds'))).brightness,
+      Brightness.dark,
+    );
+
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    await tester.pumpAndSettle();
+
+    expect(
+      Theme.of(tester.element(find.text('Funds'))).brightness,
+      Brightness.light,
+    );
+  });
 }
 
 Future<void> _pumpSignedIn(
@@ -1106,6 +1173,7 @@ Future<void> _pumpSignedIn(
   FakeMembershipRepository? memberships,
   FakeInviteRepository? invites,
   FakeProfileRepository? profiles,
+  ThemeController? themes,
   bool openLedger = true,
 }) async {
   final fake = FakeAuthService(signedIn: true);
@@ -1117,6 +1185,7 @@ Future<void> _pumpSignedIn(
 
   await tester.pumpWidget(
     ChipbookApp(
+      themes: themes ?? _themes(),
       auth: auth,
       fundRepository: repository,
       entryRepository: entries ?? InMemoryEntryRepository(),
@@ -1521,5 +1590,23 @@ class FakeInviteRepository implements InviteRepository {
     lastToken = token;
     onAccept?.call(token);
     return acceptedFundId;
+  }
+}
+
+ThemeController _themes([Map<String, String>? values]) {
+  return ThemeController(_FakePreferenceStore(values ?? <String, String>{}));
+}
+
+class _FakePreferenceStore implements PreferenceStore {
+  _FakePreferenceStore(this.values);
+
+  final Map<String, String> values;
+
+  @override
+  Future<String?> read(String key) async => values[key];
+
+  @override
+  Future<void> write(String key, String value) async {
+    values[key] = value;
   }
 }

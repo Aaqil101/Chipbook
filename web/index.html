@@ -20,8 +20,9 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A shared ledger for group fundraising.">
   <meta name="theme-color" content="#00695C">
-  <meta name="color-scheme" content="light">
-  <!-- Dark Reader and similar extensions otherwise invert this light page. -->
+  <meta name="color-scheme" content="light dark">
+  <!-- Dark Reader and similar extensions otherwise invert this page; the
+       splash has explicit light and dark palettes instead. -->
   <meta name="darkreader-lock">
 
   <!--
@@ -50,9 +51,9 @@
 
   <!--
     The splash paints before Flutter or CanvasKit has loaded. It uses the same
-    light surface as the app so the hand-off to the first frame is a fade, not
-    a flash. The icon is embedded so the mark appears with the first paint.
-    Colours follow web/manifest.json and the Material theme; the name and
+    surface as the app, light or dark, so the hand-off to the first frame is a
+    fade, not a flash. The icon is embedded so the mark appears with the first
+    paint. Colours follow the Material schemes in lib/theme.dart; the name and
     tagline match lib/app_info.dart.
   -->
   <style>
@@ -61,7 +62,7 @@
       margin: 0;
       height: 100%;
       background-color: #F4FBF8;
-      color-scheme: light;
+      color-scheme: light dark;
     }
 
     .splash {
@@ -158,6 +159,42 @@
       animation: splash-rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 320ms both;
     }
 
+    /* Match the dark Material scheme surface and accents, so the hand-off to
+       a dark Flutter frame does not flash a light splash. */
+    html[data-theme="dark"],
+    html[data-theme="dark"] body {
+      background-color: #0E1513;
+    }
+
+    html[data-theme="dark"] .splash {
+      background:
+        radial-gradient(90% 70% at 50% 24%, #141F1C 0%, #0E1513 52%, #1C2C29 100%);
+      color: #DDE4E1;
+    }
+
+    html[data-theme="dark"] .splash__icon {
+      box-shadow:
+        0 18px 34px rgba(0, 0, 0, 0.55),
+        0 2px 6px rgba(0, 0, 0, 0.35);
+    }
+
+    html[data-theme="dark"] .splash__name {
+      color: #DDE4E1;
+    }
+
+    html[data-theme="dark"] .splash__tagline,
+    html[data-theme="dark"] .splash__status {
+      color: #BEC9C6;
+    }
+
+    html[data-theme="dark"] .splash__track {
+      background-color: rgba(130, 213, 200, 0.12);
+    }
+
+    html[data-theme="dark"] .splash__bar {
+      background: linear-gradient(90deg, #5AA79B 0%, #82D5C8 50%, #5AA79B 100%);
+    }
+
     @keyframes splash-pop {
       0% { opacity: 0; transform: scale(0.86); }
       100% { opacity: 1; transform: scale(1); }
@@ -205,6 +242,25 @@
       }
     }
   </style>
+
+  <script>
+    // Choose the same appearance Flutter will use before the first paint.
+    // shared_preferences stores the string JSON-encoded under this key.
+    (function () {
+      var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      try {
+        var stored = JSON.parse(window.localStorage.getItem('theme_preference'));
+        if (stored === 'dark') {
+          dark = true;
+        } else if (stored === 'light') {
+          dark = false;
+        }
+      } catch (error) {
+        // No saved choice or unreadable storage: follow the system.
+      }
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    })();
+  </script>
 </head>
 <body>
   <div

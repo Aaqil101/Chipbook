@@ -12,6 +12,7 @@ import 'repositories/fund_repository.dart';
 import 'repositories/invite_repository.dart';
 import 'repositories/membership_repository.dart';
 import 'repositories/profile_repository.dart';
+import 'repositories/shared_preferences_store.dart';
 import 'repositories/supabase_entry_repository.dart';
 import 'repositories/supabase_fund_repository.dart';
 import 'repositories/supabase_invite_repository.dart';
@@ -19,13 +20,20 @@ import 'repositories/supabase_membership_repository.dart';
 import 'repositories/supabase_profile_repository.dart';
 import 'screens/auth_gate.dart';
 import 'screens/splash_page.dart';
+import 'state/theme_controller.dart';
 import 'supabase_config.dart';
+import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load the appearance choice before the first frame, so a saved Dark or
+  // Light preference never starts with a flash of the other theme.
+  final themes = ThemeController(SharedPreferencesStore());
+  await themes.load();
+
   if (!SupabaseConfig.isConfigured) {
-    runApp(const _MissingConfigApp());
+    runApp(_MissingConfigApp(themes: themes));
     return;
   }
 
@@ -33,11 +41,11 @@ Future<void> main() async {
   // initializing before runApp avoids showing a second splash there.
   if (kIsWeb) {
     await _initializeSupabase();
-    runApp(_buildApp(Supabase.instance.client));
+    runApp(_buildApp(Supabase.instance.client, themes));
     return;
   }
 
-  runApp(const _StartupApp());
+  runApp(_StartupApp(themes: themes));
 }
 
 Future<void> _initializeSupabase() {
@@ -47,8 +55,9 @@ Future<void> _initializeSupabase() {
   );
 }
 
-ChipbookApp _buildApp(SupabaseClient client) {
+ChipbookApp _buildApp(SupabaseClient client, ThemeController themes) {
   return ChipbookApp(
+    themes: themes,
     auth: AuthController(SupabaseAuthService(client)),
     fundRepository: SupabaseFundRepository(client),
     entryRepository: SupabaseEntryRepository(client),
@@ -60,7 +69,9 @@ ChipbookApp _buildApp(SupabaseClient client) {
 
 /// Initializes Supabase behind the animated splash on mobile.
 class _StartupApp extends StatefulWidget {
-  const _StartupApp();
+  const _StartupApp({required this.themes});
+
+  final ThemeController themes;
 
   @override
   State<_StartupApp> createState() => _StartupAppState();
@@ -123,9 +134,8 @@ class _StartupAppState extends State<_StartupApp> {
     final auth = _auth;
     final error = _error;
 
-    return MaterialApp(
-      title: AppInfo.name,
-      theme: _theme(),
+    return _ThemedApp(
+      themes: widget.themes,
       home: AnimatedSwitcher(
         duration: const Duration(milliseconds: 450),
         child: error != null
@@ -137,6 +147,7 @@ class _StartupAppState extends State<_StartupApp> {
             ? const SplashPage(key: ValueKey<String>('splash'))
             : AuthGate(
                 key: const ValueKey<String>('app'),
+                themes: widget.themes,
                 auth: auth,
                 fundRepository: _fundRepository!,
                 entryRepository: _entryRepository!,
@@ -144,6 +155,28 @@ class _StartupAppState extends State<_StartupApp> {
                 inviteRepository: _inviteRepository!,
                 profileRepository: _profileRepository!,
               ),
+      ),
+    );
+  }
+}
+
+/// Supplies both schemes and the saved mode to the whole app.
+class _ThemedApp extends StatelessWidget {
+  const _ThemedApp({required this.themes, required this.home});
+
+  final ThemeController themes;
+  final Widget home;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: themes,
+      builder: (context, _) => MaterialApp(
+        title: AppInfo.name,
+        theme: buildLightTheme(),
+        darkTheme: buildDarkTheme(),
+        themeMode: themes.themeMode,
+        home: home,
       ),
     );
   }
@@ -194,6 +227,7 @@ class _StartupErrorPage extends StatelessWidget {
 class ChipbookApp extends StatelessWidget {
   const ChipbookApp({
     super.key,
+    required this.themes,
     required this.auth,
     required this.fundRepository,
     required this.entryRepository,
@@ -202,6 +236,7 @@ class ChipbookApp extends StatelessWidget {
     required this.profileRepository,
   });
 
+  final ThemeController themes;
   final AuthController auth;
   final FundRepository fundRepository;
   final EntryRepository entryRepository;
@@ -211,10 +246,10 @@ class ChipbookApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppInfo.name,
-      theme: _theme(),
+    return _ThemedApp(
+      themes: themes,
       home: AuthGate(
+        themes: themes,
         auth: auth,
         fundRepository: fundRepository,
         entryRepository: entryRepository,
@@ -227,13 +262,14 @@ class ChipbookApp extends StatelessWidget {
 }
 
 class _MissingConfigApp extends StatelessWidget {
-  const _MissingConfigApp();
+  const _MissingConfigApp({required this.themes});
+
+  final ThemeController themes;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppInfo.name,
-      theme: _theme(),
+    return _ThemedApp(
+      themes: themes,
       home: const _MissingConfigPage(),
     );
   }
@@ -271,8 +307,4 @@ class _MissingConfigPage extends StatelessWidget {
       ),
     );
   }
-}
-
-ThemeData _theme() {
-  return ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal));
 }

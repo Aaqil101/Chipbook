@@ -7,6 +7,7 @@ import '../models/fund.dart';
 import '../repositories/invite_repository.dart';
 import '../repositories/membership_repository.dart';
 import '../state/ledger_controller.dart';
+import '../state/theme_controller.dart';
 import 'entries_page.dart';
 import 'home_page.dart';
 import 'members_page.dart';
@@ -16,6 +17,7 @@ import 'settings_page.dart';
 class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
+    required this.themes,
     required this.ledger,
     required this.fund,
     required this.funds,
@@ -37,6 +39,7 @@ class HomeShell extends StatefulWidget {
     this.onSignOut,
   });
 
+  final ThemeController themes;
   final LedgerController ledger;
   final Fund fund;
   final List<Fund> funds;
@@ -126,15 +129,21 @@ class _HomeShellState extends State<HomeShell> {
                 inviteRepository: widget.inviteRepository,
                 onAccessChanged: widget.onAccessChanged,
               ),
-            SettingsPage(
-              fund: widget.fund,
-              username: widget.currentUsername,
-              permissions: permissions,
-              email: widget.currentUserEmail,
-              provider: widget.currentUserProvider,
-              onRenameUsername: widget.onRenameUsername,
-              onManageFund: widget.onManageFund,
-              onSignOut: widget.onSignOut,
+            ListenableBuilder(
+              listenable: widget.themes,
+              builder: (context, _) => SettingsPage(
+                fund: widget.fund,
+                username: widget.currentUsername,
+                permissions: permissions,
+                email: widget.currentUserEmail,
+                provider: widget.currentUserProvider,
+                themePreference: widget.themes.preference,
+                onThemePreferenceChanged: (preference) =>
+                    unawaited(widget.themes.setPreference(preference)),
+                onRenameUsername: widget.onRenameUsername,
+                onManageFund: widget.onManageFund,
+                onSignOut: widget.onSignOut,
+              ),
             ),
           ],
         ),

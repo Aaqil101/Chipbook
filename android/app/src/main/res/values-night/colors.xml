@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#00695C</color>
+    <!-- Matches the dark Material scheme surface, so night mode gets a dark
+         starting window instead of a dimmed light one. -->
+    <color name="splash_background">#0E1513</color>
+</resources>

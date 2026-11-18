@@ -10,6 +10,7 @@ import '../repositories/invite_repository.dart';
 import '../repositories/membership_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../state/profile_controller.dart';
+import '../state/theme_controller.dart';
 import 'profile_setup_page.dart';
 import 'sign_in_page.dart';
 import 'signed_in_page.dart';
@@ -18,6 +19,7 @@ import 'signed_in_page.dart';
 class AuthGate extends StatelessWidget {
   const AuthGate({
     super.key,
+    required this.themes,
     required this.auth,
     required this.fundRepository,
     required this.entryRepository,
@@ -26,6 +28,7 @@ class AuthGate extends StatelessWidget {
     required this.profileRepository,
   });
 
+  final ThemeController themes;
   final AuthController auth;
   final FundRepository fundRepository;
   final EntryRepository entryRepository;
@@ -49,6 +52,7 @@ class AuthGate extends StatelessWidget {
 
         return _ProfileGate(
           key: ValueKey<String>(userId),
+          themes: themes,
           auth: auth,
           userId: userId,
           profileRepository: profileRepository,
@@ -66,6 +70,7 @@ class AuthGate extends StatelessWidget {
 class _ProfileGate extends StatefulWidget {
   const _ProfileGate({
     super.key,
+    required this.themes,
     required this.auth,
     required this.userId,
     required this.profileRepository,
@@ -75,6 +80,7 @@ class _ProfileGate extends StatefulWidget {
     required this.inviteRepository,
   });
 
+  final ThemeController themes;
   final AuthController auth;
   final String userId;
   final ProfileRepository profileRepository;
@@ -133,6 +139,7 @@ class _ProfileGateState extends State<_ProfileGate> {
         }
 
         return SignedInPage(
+          themes: widget.themes,
           auth: widget.auth,
           profile: profile,
           onRenameUsername: _profiles.setUsername,

@@ -4,6 +4,7 @@ import '../app_info.dart';
 import '../domain/fund_permissions.dart';
 import '../domain/sign_in_provider.dart';
 import '../models/fund.dart';
+import '../state/theme_controller.dart';
 import 'about_page.dart';
 import 'rename_username_dialog.dart';
 
@@ -16,6 +17,8 @@ class SettingsPage extends StatelessWidget {
     this.permissions,
     this.email,
     this.provider,
+    this.themePreference = ThemePreference.system,
+    this.onThemePreferenceChanged,
     this.onRenameUsername,
     this.onManageFund,
     this.onSignOut,
@@ -35,6 +38,12 @@ class SettingsPage extends StatelessWidget {
 
   /// The provider behind the session, such as `google` or `email`.
   final String? provider;
+
+  /// The appearance choice this device is using.
+  final ThemePreference themePreference;
+
+  /// Applies a new appearance choice for this device.
+  final ValueChanged<ThemePreference>? onThemePreferenceChanged;
 
   /// Opens the rename dialog for [username].
   final Future<void> Function(String username)? onRenameUsername;
@@ -119,6 +128,29 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          const _SectionHeader(title: 'Appearance'),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (
+                  var index = 0;
+                  index < ThemePreference.values.length;
+                  index++
+                ) ...[
+                  if (index > 0) const Divider(height: 1),
+                  _ThemeOption(
+                    preference: ThemePreference.values[index],
+                    selected:
+                        ThemePreference.values[index] == themePreference,
+                    onSelected: onThemePreferenceChanged,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           const _SectionHeader(title: 'About'),
           const SizedBox(height: 8),
           Card(
@@ -166,5 +198,55 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(title, style: Theme.of(context).textTheme.titleMedium);
+  }
+}
+
+class _ThemeOption extends StatelessWidget {
+  const _ThemeOption({
+    required this.preference,
+    required this.selected,
+    this.onSelected,
+  });
+
+  final ThemePreference preference;
+  final bool selected;
+  final ValueChanged<ThemePreference>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSelected = this.onSelected;
+
+    return ListTile(
+      leading: Icon(_iconFor(preference)),
+      title: Text(_labelFor(preference)),
+      subtitle: Text(_descriptionFor(preference)),
+      trailing: selected ? const Icon(Icons.check) : null,
+      selected: selected,
+      onTap: onSelected == null ? null : () => onSelected(preference),
+    );
+  }
+
+  static IconData _iconFor(ThemePreference preference) {
+    return switch (preference) {
+      ThemePreference.system => Icons.brightness_auto_outlined,
+      ThemePreference.light => Icons.light_mode_outlined,
+      ThemePreference.dark => Icons.dark_mode_outlined,
+    };
+  }
+
+  static String _labelFor(ThemePreference preference) {
+    return switch (preference) {
+      ThemePreference.system => 'System',
+      ThemePreference.light => 'Light',
+      ThemePreference.dark => 'Dark',
+    };
+  }
+
+  static String _descriptionFor(ThemePreference preference) {
+    return switch (preference) {
+      ThemePreference.system => 'Match this device',
+      ThemePreference.light => 'Always light',
+      ThemePreference.dark => 'Always dark',
+    };
   }
 }

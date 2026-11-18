@@ -39,6 +39,7 @@ dependencies:
   uuid: ^4.6.0
   # Formats grouped whole units while amounts stay exact integers.
   intl: ^0.20.3
+  shared_preferences: ^2.5.6
 
 dev_dependencies:
   flutter_test:

@@ -11,6 +11,7 @@ import '../repositories/fund_repository.dart';
 import '../repositories/invite_repository.dart';
 import '../repositories/membership_repository.dart';
 import '../state/fund_controller.dart';
+import '../state/theme_controller.dart';
 import 'create_fund_dialog.dart';
 import 'edit_fund_settings_dialog.dart';
 import 'fund_settings_sheet.dart';
@@ -22,6 +23,7 @@ import 'restore_fund_dialog.dart';
 class SignedInPage extends StatefulWidget {
   const SignedInPage({
     super.key,
+    required this.themes,
     required this.auth,
     required this.profile,
     required this.onRenameUsername,
@@ -31,6 +33,7 @@ class SignedInPage extends StatefulWidget {
     required this.inviteRepository,
   });
 
+  final ThemeController themes;
   final AuthController auth;
   final Profile profile;
   final Future<void> Function(String username) onRenameUsername;
@@ -96,6 +99,7 @@ class _SignedInPageState extends State<SignedInPage> {
 
         final permissions = _funds.permissions;
         return HomeShell(
+          themes: widget.themes,
           ledger: ledger,
           fund: fund,
           funds: _funds.funds,

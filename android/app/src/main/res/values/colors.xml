@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#00695C</color>
-    <!-- Matches the web splash and the lighter app surface. -->
+    <!-- Matches the light Material scheme surface, so the hand-off to the
+         Flutter splash is the same colour. -->
     <color name="splash_background">#F4FBF8</color>
 </resources>

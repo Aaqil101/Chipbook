@@ -2,7 +2,10 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app_info.dart';
 
-/// Animated light splash shown while the app starts on mobile.
+/// Animated splash shown while the app starts on mobile.
+///
+/// Colours come from the active scheme, so the splash matches the app in both
+/// light and dark mode and the hand-off after startup is a fade, not a flash.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -11,12 +14,6 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
-  static const _surface = Color(0xFFF4FBF8);
-  static const _deepTeal = Color(0xFF004C45);
-  static const _mutedTeal = Color(0xFF4D6A64);
-  static const _statusTeal = Color(0xFF6B8A83);
-  static const _teal = Color(0xFF00695C);
-
   late final AnimationController _glow;
   late final AnimationController _bar;
   bool? _animated;
@@ -61,15 +58,25 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final animated = _animated ?? true;
+    final scheme = Theme.of(context).colorScheme;
+    final surface = scheme.surface;
+    final highlight = Color.alphaBlend(
+      scheme.primary.withValues(alpha: 0.05),
+      surface,
+    );
+    final edge = Color.alphaBlend(
+      scheme.primary.withValues(alpha: 0.12),
+      surface,
+    );
 
     return Scaffold(
-      backgroundColor: _surface,
+      backgroundColor: surface,
       body: DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment(0, -0.4),
+            center: const Alignment(0, -0.4),
             radius: 0.95,
-            colors: [Colors.white, _surface, Color(0xFFE8F4EF)],
+            colors: [highlight, surface, edge],
           ),
         ),
         child: SizedBox.expand(
@@ -93,36 +100,36 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _mark(animated),
+                    _mark(animated, scheme),
                     const SizedBox(height: 22),
-                    const Text(
+                    Text(
                       AppInfo.name,
                       style: TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.6,
-                        color: _deepTeal,
+                        color: scheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       AppInfo.tagline,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
                         height: 1.4,
-                        color: _mutedTeal,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 30),
-                    _progress(animated),
+                    _progress(animated, scheme),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'LOADING…',
                       style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 2.2,
-                        color: _statusTeal,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -135,7 +142,11 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _mark(bool animated) {
+  Widget _mark(bool animated, ColorScheme scheme) {
+    final isDark = scheme.brightness == Brightness.dark;
+    final shadow = Colors.black.withValues(alpha: isDark ? 0.5 : 0.18);
+    final softShadow = Colors.black.withValues(alpha: isDark ? 0.32 : 0.1);
+
     return SizedBox(
       width: 160,
       height: 160,
@@ -152,10 +163,13 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               return Container(
                 width: size,
                 height: size,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [Color(0x3300695C), Color(0x0000695C)],
+                    colors: [
+                      scheme.primary.withValues(alpha: 0.2),
+                      scheme.primary.withValues(alpha: 0),
+                    ],
                   ),
                 ),
               );
@@ -174,16 +188,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               height: 96,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x2E004D44),
+                    color: shadow,
                     blurRadius: 34,
-                    offset: Offset(0, 18),
+                    offset: const Offset(0, 18),
                   ),
                   BoxShadow(
-                    color: Color(0x1A004D44),
+                    color: softShadow,
                     blurRadius: 8,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -203,7 +217,19 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _progress(bool animated) {
+  Widget _progress(bool animated, ColorScheme scheme) {
+    final bar = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            scheme.primary.withValues(alpha: 0.65),
+            scheme.primary,
+            scheme.primary.withValues(alpha: 0.65),
+          ],
+        ),
+      ),
+    );
+
     return SizedBox(
       width: 176,
       height: 4,
@@ -216,19 +242,15 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             final barWidth = width * barFactor;
 
             if (!animated) {
-              return const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF4DB6AC), _teal, Color(0xFF4DB6AC)],
-                  ),
-                ),
-              );
+              return bar;
             }
 
             return Stack(
               children: [
-                const Positioned.fill(
-                  child: ColoredBox(color: Color(0x1F00695C)),
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: scheme.primary.withValues(alpha: 0.12),
+                  ),
                 ),
                 AnimatedBuilder(
                   animation: _bar,
@@ -242,13 +264,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       child: child!,
                     );
                   },
-                  child: const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF4DB6AC), _teal, Color(0xFF4DB6AC)],
-                      ),
-                    ),
-                  ),
+                  child: bar,
                 ),
               ],
             );
