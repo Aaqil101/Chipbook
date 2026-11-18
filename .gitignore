@@ -35,3 +35,7 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Local MCP tool state (Playwright page snapshots, Serena project cache)
+.playwright-mcp/
+.serena/
