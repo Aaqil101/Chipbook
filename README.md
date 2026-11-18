@@ -287,13 +287,20 @@ own is required.
 3. Add the production origin to Supabase under **Authentication > URL
    Configuration**:
 
-   - **Site URL:** `https://your-domain.example`
-   - **Redirect URLs:** `https://your-domain.example` and
-     `https://your-domain.example/**`
+   - **Site URL:** `https://chipbook.aaqil.cc`
+   - **Redirect URLs:** `https://chipbook.aaqil.cc` and
+     `https://chipbook.aaqil.cc/**`
 
-   Keep the local `http://127.0.0.1:8080` entries too if you still develop
-   against the same project. Magic links and Google sign-in return to the Site
-   URL, so it must match the deployed origin.
+   Keep the local `http://127.0.0.1:8080` entries only if the Site URL is also
+   local; they are not consulted otherwise. Magic links and Google sign-in
+   return to the Site URL, so it must match the deployed origin.
+
+   The web build passes no `redirectTo`, because `authRedirect()` returns null
+   on the web, so the Site URL is always used. A sign-in started on
+   `http://127.0.0.1:8080` therefore returns to the deployed host and fails the
+   code exchange: the PKCE verifier is stored under the origin that requested
+   it. Test auth against the deployed site, or point a second Supabase project
+   at the local origin.
 
 4. If you host under a subpath (for example GitHub Pages), build with the
    matching base path and use that full URL as the Site URL:
@@ -305,6 +312,24 @@ own is required.
 Only the publishable key belongs in a client build. Never add a
 `service_role`/secret key, database password, or personal access token to
 `.env`, `--dart-define`, or any file tracked by git.
+
+### Domain and DNS
+
+The app is served from `https://chipbook.aaqil.cc`. The `aaqil.cc` apex is
+reserved for a hub page and is not attached to the project.
+
+`aaqil.cc` is registered at Cloudflare and uses Cloudflare nameservers, so the
+record lives in that account:
+
+| Type | Name | Target | Proxy |
+| --- | --- | --- | --- |
+| `CNAME` | `chipbook` | `0f9cc118be9321c3.vercel-dns-017.com` | DNS only (grey cloud) |
+
+The target is the value shown on the project's **Domains** page; Vercel also
+accepts `cname.vercel-dns.com`. Leave the record unproxied. The host terminates
+TLS with its own certificate, so proxying adds a second TLS layer and produces
+redirect loops that look like an application bug. `vercel domains verify
+chipbook.aaqil.cc` reports `Valid` only after the record resolves.
 
 ### Deploy from CI
 
