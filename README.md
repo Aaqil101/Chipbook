@@ -109,11 +109,27 @@ are read-only and cannot receive entries, invites, or new members.
    built-in sender, which allows 2 emails per hour per project and only
    delivers to addresses in your organization. Anyone else fails with
    `email_address_not_authorized`. Add a custom SMTP provider under
-   **Authentication > Emails > SMTP Settings** (SMTP2GO, Resend, or another
-   provider that verifies your sender domain) so friends outside the
-   organization can receive a link, then raise the auth email rate limit. The
-   built-in sender is only for trying the app yourself; `supabase start`
-   serves the same flows locally through Mailpit with no email limit.
+   **Authentication > Emails > SMTP Settings** so friends outside the
+   organization can receive a link. The built-in sender is only for trying the
+   app yourself; `supabase start` serves the same flows locally through Mailpit
+   with no email limit.
+
+   **SMTP provider.** Auth mail is sent from `noreply@mail.<domain>` through
+   Resend: host `smtp.resend.com`, port 465, username `resend`, password is an
+   API key created with sending access for that subdomain. The API key lives in
+   the dashboard only. The sending subdomain is verified with a DKIM TXT record
+   on `resend._domainkey.mail.<domain>` and two CNAMEs for the return path,
+   `send.mail.<domain>` and `rsend.mail.<domain>`. All three stay DNS only; a
+   proxied CNAME silently never verifies. The default 30 emails per hour is
+   ample for a friends-scale app, so raise it only if real load demands it.
+
+   **Inbound mail.** Cloudflare Email Routing handles the apex so an address on
+   the domain can receive mail. It adds MX records for
+   `route1/2/3.mx.cloudflare.net` and one SPF TXT record,
+   `v=spf1 include:_spf.mx.cloudflare.net ~all`. Never add a second SPF record
+   to the same name; SPF fails silently when a name has two. DMARC lives on
+   `_dmarc.<domain>` with `p=none` until reports show SPF and DKIM passing, and
+   its root policy also covers the sending subdomain.
 
    **Google sign-in.** Google is the primary sign-in. In the Google Cloud
    Console, create an OAuth 2.0 Client ID of type **Web application** and add
