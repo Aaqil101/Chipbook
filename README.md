@@ -147,13 +147,19 @@ are read-only and cannot receive entries, invites, or new members.
 
 ### Email templates
 
-The sign-in and invitation mail bodies live in `supabase/templates/` so style
-changes are reviewable. The hosted project still uses the copies in
-**Authentication > Emails**; `supabase db push` does not sync them and this CLI
-version does not compare them in `config diff`, so update the dashboard by hand.
+The sign-in, signup confirmation and invitation mail bodies live in
+`supabase/templates/` so style changes are reviewable. The hosted project still
+uses the copies in **Authentication > Emails**; `supabase db push` does not sync
+them and this CLI version does not compare them in `config diff`, so update the
+dashboard by hand.
 The files also feed `supabase start` for local mail. Avoid `supabase config push`
 for templates: it would also push dev-only values such as the local Site URL and
 email rate limit.
+
+Email confirmation is off (`enable_confirmations = false`), so a first-time
+sign-in sends the magic-link template rather than a separate confirmation mail.
+The confirmation template is kept so re-enabling confirmation still produces
+styled mail, and so local runs match the hosted project.
 
 Never commit SMTP credentials, Gmail App Passwords, OAuth client secrets, or
 the project's service key. Those belong only in the Supabase dashboard.
