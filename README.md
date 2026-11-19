@@ -351,6 +351,7 @@ The deployed site has two halves:
 | `/privacy.html` | privacy policy | `web/privacy.html` |
 | `/about.html` | longer product description | `web/about.html` |
 | `/site.css`, `/site.js` | shared styles and behaviour | `web/site.css`, `web/site.js` |
+| `/flutter_service_worker.js` | retires the pre-split worker | `web/retire-service-worker.js` |
 
 The deploy workflow builds with `--base-href /app/`, moves the bundle into
 `build/site/app/`, and copies `landing.html` to the site root as `index.html`.
@@ -362,6 +363,13 @@ at those paths.
 lands on the landing page with `?code=…` in the query. `web/site.js` forwards any
 auth parameters to `/app/` before rendering; removing that script breaks sign-in
 from email links without any error in the app itself.
+
+**The service worker kill switch matters too.** Before the split, the app
+registered a worker at scope `/`, and a browser that installed it can keep
+serving the old shell for `/app/`. `retire-service-worker.js` is published at the
+root as `flutter_service_worker.js`; the browser's update check fetches it, it
+unregisters itself, clears the old caches, and reloads open pages once. Keep the
+file until no browser can be running the pre-split build.
 
 The landing page is deliberately plain HTML and CSS, in separate files with no
 build step and no JavaScript framework, so it stays fast, indexable by Google's

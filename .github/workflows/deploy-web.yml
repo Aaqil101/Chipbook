@@ -92,7 +92,9 @@ jobs:
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
 
       # The root is real HTML and CSS; the Flutter bundle moves to /app/. The
-      # pages that Google and the README point at stay at the root.
+      # pages that Google and the README point at stay at the root, and the
+      # root's flutter_service_worker.js is a kill switch for the pre-split
+      # worker that was registered at scope "/".
       - name: Lay out the site
         run: |
           set -euo pipefail
@@ -100,7 +102,7 @@ jobs:
             echo "::error::No web build output at build/web"
             exit 1
           }
-          for page in landing.html privacy.html about.html favicon.png site.css site.js; do
+          for page in landing.html privacy.html about.html favicon.png site.css site.js retire-service-worker.js; do
             test -f "build/web/$page" || {
               echo "::error::web/$page is missing from the bundle"
               exit 1
@@ -114,6 +116,7 @@ jobs:
           cp build/site/app/favicon.png build/site/favicon.png
           cp build/site/app/site.css build/site/site.css
           cp build/site/app/site.js build/site/site.js
+          cp build/site/app/retire-service-worker.js build/site/flutter_service_worker.js
 
       - name: Install Vercel CLI
         run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}

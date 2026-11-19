@@ -35,6 +35,7 @@ doc/api/
 
 # Hand-written site scripts, which the rule above would otherwise hide.
 !web/site.js
+!web/retire-service-worker.js
 
 .flutter-plugins
 .flutter-plugins-dependencies
