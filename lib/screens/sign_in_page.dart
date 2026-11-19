@@ -7,12 +7,9 @@ import '../domain/auth_validation.dart';
 
 /// Signs in with Google, or falls back to an email magic link.
 class SignInPage extends StatefulWidget {
-  const SignInPage({super.key, required this.auth, this.onBack});
+  const SignInPage({super.key, required this.auth});
 
   final AuthController auth;
-
-  /// Returns to the landing page. Omitted when the form is the entry point.
-  final VoidCallback? onBack;
 
   @override
   State<SignInPage> createState() => _SignInPageState();
@@ -125,17 +122,6 @@ class _SignInPageState extends State<SignInPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.onBack != null) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: widget.onBack,
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Back'),
-              ),
-            ),
-            const SizedBox(height: 4),
-          ],
           Text(
             AppInfo.name,
             textAlign: TextAlign.center,

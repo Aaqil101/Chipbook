@@ -237,9 +237,9 @@ somewhere durable.
 
 ## Using it
 
-1. A visitor sees a landing page describing Chipbook, then signs in with
-   Google or an email link. The first sign-in asks for a username, which is
-   what other members see; your email address is never shown in a member list.
+1. Sign in with Google or an email link. The first sign-in asks for a username,
+   which is what other members see; your email address is never shown in a
+   member list.
    **Home** greets you, counts active, archived, and pending work, and shows
    each fund's raised, paid-out, and balance figures in that fund's own
    currency. Tap a fund to view its ledger; create one from Home and you become
@@ -471,9 +471,8 @@ fails before deploying when the token, org ID, or project ID is wrong.
   store.
 - `lib/state/` — `ChangeNotifier` controllers for auth, funds, the active
   ledger, and the signed-in profile.
-- `lib/screens/` - the landing page, sign-in, profile setup, the home
-  dashboard, ledger, add-entry form, members page, settings, about page, and
-  dialogs.
+- `lib/screens/` - sign-in, profile setup, the home dashboard, ledger,
+  add-entry form, members page, settings, about page, and dialogs.
 - `supabase/migrations/` — schema, approval, immutable-entry, and
   last-organizer triggers, invite acceptance, fund archival, and RLS policies.
 - `supabase/tests/rls_test.sql` — executable role and RLS suite.

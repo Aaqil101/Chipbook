@@ -11,7 +11,6 @@ import '../repositories/membership_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../state/profile_controller.dart';
 import '../state/theme_controller.dart';
-import 'landing_page.dart';
 import 'profile_setup_page.dart';
 import 'sign_in_page.dart';
 import 'signed_in_page.dart';
@@ -43,7 +42,7 @@ class AuthGate extends StatelessWidget {
       listenable: auth,
       builder: (context, _) {
         if (!auth.isSignedIn) {
-          return _SignedOutGate(auth: auth);
+          return SignInPage(auth: auth);
         }
 
         final userId = auth.userId;
@@ -63,35 +62,6 @@ class AuthGate extends StatelessWidget {
           inviteRepository: inviteRepository,
         );
       },
-    );
-  }
-}
-
-/// Explains the app before the sign-in form, and returns to that explanation.
-///
-/// The state lives here rather than in [AuthGate] so signing out lands on the
-/// landing page again: this subtree is dropped while a session exists.
-class _SignedOutGate extends StatefulWidget {
-  const _SignedOutGate({required this.auth});
-
-  final AuthController auth;
-
-  @override
-  State<_SignedOutGate> createState() => _SignedOutGateState();
-}
-
-class _SignedOutGateState extends State<_SignedOutGate> {
-  bool _showSignIn = false;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_showSignIn) {
-      return LandingPage(onSignIn: () => setState(() => _showSignIn = true));
-    }
-
-    return SignInPage(
-      auth: widget.auth,
-      onBack: () => setState(() => _showSignIn = false),
     );
   }
 }
