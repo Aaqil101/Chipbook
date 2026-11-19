@@ -3,6 +3,16 @@ name: Deploy web
 on:
   push:
     branches: [master]
+    # Only a change that can reach the web bundle is worth a production
+    # deployment. Everything else is verified by ci.yml instead.
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'analysis_options.yaml'
+      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
     inputs:
       target:
@@ -59,6 +69,8 @@ jobs:
           channel: stable
           cache: true
 
+      # CI checks the same tree, but a deploy must never ship something that
+      # fails its own checks; a manual dispatch never runs CI at all.
       - name: Install dependencies
         run: flutter pub get
 
