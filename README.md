@@ -399,12 +399,14 @@ unverified.
    `gh secret set` prompts for each value, so no secret is pasted into a
    tracked file or the workflow itself.
 
-4. Push a bundle change to `master` to deploy production; a push that only
-   touches docs, `android/`, `supabase/`, or `test/` runs CI but skips the
-   deploy. To run the workflow by hand, open **Deploy web** in the Actions tab
-   and pick a **target**: **preview** (the default) uploads the same build to a
-   throwaway URL and leaves the live site alone, while **production** redeploys
-   the branch you selected. The job summary prints the target and URL.
+4. Push a bundle change to `master` to deploy production. A push that only
+   touches docs, `android/`, `supabase/`, or `test/` runs CI and deploys
+   nothing, and because a path-filtered workflow is never queued, **Deploy web**
+   does not appear in the Actions list at all for those pushes. To run the
+   workflow by hand, open **Deploy web** in the Actions tab and pick a
+   **target**: **preview** (the default) uploads the same build to a throwaway
+   URL and leaves the live site alone, while **production** redeploys the branch
+   you selected. The job summary prints the target and URL.
 
 Preview deployments sit behind Vercel Authentication, so opening one in a
 browser asks you to sign in to Vercel.
