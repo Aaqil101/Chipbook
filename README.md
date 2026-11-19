@@ -128,8 +128,11 @@ are read-only and cannot receive entries, invites, or new members.
    `route1/2/3.mx.cloudflare.net` and one SPF TXT record,
    `v=spf1 include:_spf.mx.cloudflare.net ~all`. Never add a second SPF record
    to the same name; SPF fails silently when a name has two. DMARC lives on
-   `_dmarc.<domain>` with `p=none` until reports show SPF and DKIM passing, and
-   its root policy also covers the sending subdomain.
+   `_dmarc.<domain>`, with the root policy also covering the sending subdomain.
+   Start at `p=none`, then tighten to `p=quarantine; pct=25`, `pct=100`, and
+   finally `p=reject` as reports confirm SPF and DKIM keep passing. Keep one
+   `_dmarc` record only; a duplicate makes the policy invalid and DMARC falls
+   back to observing.
 
    **Google sign-in.** Google is the primary sign-in. In the Google Cloud
    Console, create an OAuth 2.0 Client ID of type **Web application** and add
