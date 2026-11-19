@@ -340,6 +340,31 @@ Only the publishable key belongs in a client build. Never add a
 `service_role`/secret key, database password, or personal access token to
 `.env`, `--dart-define`, or any file tracked by git.
 
+### Site layout
+
+The deployed site has two halves:
+
+| Path | Serves | Source |
+| --- | --- | --- |
+| `/` | static landing page | `web/landing.html` |
+| `/app/` | the Flutter app | `flutter build web --base-href /app/` |
+| `/privacy.html` | privacy policy | `web/privacy.html` |
+| `/about.html` | longer product description | `web/about.html` |
+
+The deploy workflow builds with `--base-href /app/`, moves the bundle into
+`build/site/app/`, and copies `landing.html` to the site root as `index.html`.
+`privacy.html`, `about.html` and `favicon.png` are copied to the root too,
+because the Google OAuth branding screen and the README point at those paths.
+
+**Auth depends on one detail.** Supabase's Site URL is the root, so a magic link
+lands on the landing page with `?code=…` in the query. `web/landing.html`
+forwards any auth parameters to `/app/` before rendering; removing that script
+breaks sign-in from email links without any error in the app itself.
+
+The landing page is deliberately plain HTML and CSS, with no build step and no
+JavaScript framework, so it stays fast, indexable by Google's OAuth reviewers,
+and immune to Flutter bundle changes.
+
 ### Domain and DNS
 
 The app is served from `https://chipbook.aaqil.cc`. The `aaqil.cc` apex is

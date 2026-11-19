@@ -83,11 +83,35 @@ jobs:
       # Vercel's build image has no Flutter SDK, so the bundle is built here and
       # uploaded as a prebuilt deployment. The Supabase values are compiled into
       # the bundle, so a changed value needs a new deployment, not a rebuild.
+      # The app lives under /app/ so the site root can be a static landing page.
       - name: Build web
         run: |
           flutter build web --release \
+            --base-href /app/ \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+
+      # The root is real HTML and CSS; the Flutter bundle moves to /app/. The
+      # pages that Google and the README point at stay at the root.
+      - name: Lay out the site
+        run: |
+          set -euo pipefail
+          test -f build/web/index.html || {
+            echo "::error::No web build output at build/web"
+            exit 1
+          }
+          for page in landing.html privacy.html about.html favicon.png; do
+            test -f "build/web/$page" || {
+              echo "::error::web/$page is missing from the bundle"
+              exit 1
+            }
+          done
+          mkdir -p build/site/app
+          find build/web -mindepth 1 -maxdepth 1 -exec mv {} build/site/app/ \;
+          cp build/site/app/landing.html build/site/index.html
+          cp build/site/app/privacy.html build/site/privacy.html
+          cp build/site/app/about.html build/site/about.html
+          cp build/site/app/favicon.png build/site/favicon.png
 
       - name: Install Vercel CLI
         run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
@@ -99,12 +123,12 @@ jobs:
 
       - name: Stage the build output
         run: |
-          test -f build/web/index.html || {
-            echo "::error::No web build output at build/web"
+          test -f build/site/index.html || {
+            echo "::error::No site output at build/site"
             exit 1
           }
           mkdir -p .vercel/output/static
-          cp -R build/web/. .vercel/output/static/
+          cp -R build/site/. .vercel/output/static/
           printf '{"version":3}\n' > .vercel/output/config.json
 
       - name: Deploy
