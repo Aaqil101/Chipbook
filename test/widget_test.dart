@@ -23,7 +23,7 @@ import 'package:chipbook/repositories/profile_repository.dart';
 import 'package:chipbook/state/theme_controller.dart';
 
 void main() {
-  testWidgets('signed-out users see the sign-in screen', (tester) async {
+  testWidgets('signed-out users see the landing page', (tester) async {
     final fake = FakeAuthService();
     final auth = AuthController(fake);
     addTearDown(fake.dispose);
@@ -40,6 +40,12 @@ void main() {
         profileRepository: FakeProfileRepository(),
       ),
     );
+
+    expect(find.text('Sign in to Chipbook'), findsOneWidget);
+    expect(find.text('Send magic link'), findsNothing);
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Send magic link'), findsOneWidget);
     expect(find.text('No entries yet'), findsNothing);
@@ -266,6 +272,8 @@ void main() {
       ),
     );
 
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), 'ada@example.com');
     await tester.tap(find.text('Send magic link'));
     await tester.pumpAndSettle();
@@ -594,14 +602,15 @@ void main() {
     expect(find.text('Reverse'), findsOneWidget);
   });
 
-  testWidgets('signing out returns to the sign-in screen', (tester) async {
+  testWidgets('signing out returns to the landing page', (tester) async {
     await _pumpSignedIn(tester, funds: [_fund('fund-a', 'Trip fund')]);
 
     await _openSettings(tester);
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Send magic link'), findsOneWidget);
+    expect(find.text('Sign in to Chipbook'), findsOneWidget);
+    expect(find.text('Send magic link'), findsNothing);
   });
 
   testWidgets('members page shows friendly role labels', (tester) async {
