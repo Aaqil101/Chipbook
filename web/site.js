@@ -18,13 +18,35 @@
   // worker. The app's own worker lives under /app/ and must be left alone.
   if ('serviceWorker' in navigator) {
     var rootScope = new URL('/', window.location.origin).href;
-    navigator.serviceWorker.getRegistrations().then(function (registrations) {
-      registrations.forEach(function (registration) {
-        if (registration.scope === rootScope) {
-          registration.unregister();
+    navigator.serviceWorker
+      .getRegistrations()
+      .then(function (registrations) {
+        var stale = registrations.filter(function (registration) {
+          return registration.scope === rootScope;
+        });
+
+        if (stale.length === 0) {
+          return;
         }
-      });
-    });
+
+        stale.forEach(function (registration) {
+          registration.unregister();
+        });
+
+        // Unregistering leaves the worker's caches behind, and they still hold
+        // the old shell. Drop them so nothing can serve it again.
+        if (window.caches) {
+          caches
+            .keys()
+            .then(function (keys) {
+              keys.forEach(function (key) {
+                caches.delete(key);
+              });
+            })
+            .catch(function () {});
+        }
+      })
+      .catch(function () {});
   }
 
   var header = document.getElementById('header');

@@ -372,6 +372,14 @@ root as `flutter_service_worker.js`; the browser's update check fetches it, it
 unregisters itself, clears the old caches, and reloads open pages once. Keep the
 file until no browser can be running the pre-split build.
 
+That update check is the only thing that can reach a browser already stuck on
+the old shell, because the stuck worker answers every navigation from its cache
+and never lets the real page load. Loading any page on the origin once is
+normally enough to trigger it. If a browser still shows the old app, open
+DevTools → Application → Service workers, press **Unregister**, then hard
+reload; clearing site data for `chipbook.aaqil.cc` does the same thing. Fresh
+browsers are unaffected.
+
 The landing page is deliberately plain HTML and CSS, in separate files with no
 build step and no JavaScript framework, so it stays fast, indexable by Google's
 OAuth reviewers, and immune to Flutter bundle changes.
