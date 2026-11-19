@@ -355,11 +355,17 @@ chipbook.aaqil.cc` reports `Valid` only after the record resolves.
 
 ### Deploy from CI
 
-`.github/workflows/deploy-web.yml` builds and deploys `build/web` to Vercel on
-every push to `master`, and on demand from the **Actions** tab. It runs
-`flutter analyze` and `flutter test` first, so a failing commit never reaches
-the host. The bundle is built on the GitHub runner because Vercel's build image
-has no Flutter SDK, then uploaded as a prebuilt deployment.
+`.github/workflows/deploy-web.yml` builds and deploys `build/web` to Vercel
+when a push to `master` changes something that reaches the bundle (`lib/`,
+`web/`, `assets/`, the pubspec, or the workflow itself), and on demand from the
+**Actions** tab. It runs `flutter analyze` and `flutter test` first, so a
+failing commit never reaches the host. The bundle is built on the GitHub runner
+because Vercel's build image has no Flutter SDK, then uploaded as a prebuilt
+deployment.
+
+`.github/workflows/ci.yml` runs the same analyze and test steps on every push
+and pull request, including the ones that skip the deploy, so no commit goes
+unverified.
 
 1. Link this checkout to the Vercel project once:
 
@@ -388,11 +394,12 @@ has no Flutter SDK, then uploaded as a prebuilt deployment.
    `gh secret set` prompts for each value, so no secret is pasted into a
    tracked file or the workflow itself.
 
-4. Push to `master` to deploy production. To run the workflow by hand, open
-   **Deploy web** in the Actions tab and pick a **target**: **preview** (the
-   default) uploads the same build to a throwaway URL and leaves the live site
-   alone, while **production** redeploys the branch you selected. The job
-   summary prints the target and URL.
+4. Push a bundle change to `master` to deploy production; a push that only
+   touches docs, `android/`, `supabase/`, or `test/` runs CI but skips the
+   deploy. To run the workflow by hand, open **Deploy web** in the Actions tab
+   and pick a **target**: **preview** (the default) uploads the same build to a
+   throwaway URL and leaves the live site alone, while **production** redeploys
+   the branch you selected. The job summary prints the target and URL.
 
 Preview deployments sit behind Vercel Authentication, so opening one in a
 browser asks you to sign in to Vercel.
