@@ -33,6 +33,9 @@ doc/api/
 *.js.deps
 *.js.map
 
+# Hand-written site scripts, which the rule above would otherwise hide.
+!web/site.js
+
 .flutter-plugins
 .flutter-plugins-dependencies
 

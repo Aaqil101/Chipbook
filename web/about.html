@@ -3,158 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chipbook — a shared ledger for group fundraising</title>
+    <title>Chipbook — about</title>
     <meta
       name="description"
-      content="Chipbook keeps a shared record of money raised with friends. It never holds, moves, or processes money."
+      content="What Chipbook does, what it refuses to do, and how a group starts a shared ledger."
     />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <style>
-      :root {
-        color-scheme: light dark;
-        --text: #1b1b1f;
-        --muted: #5c5f66;
-        --surface: #fbfdfb;
-        --accent: #00695c;
-        --accent-strong: #004d40;
-        --rule: #dfe4e2;
-        --card: #ffffff;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --text: #e6e8e6;
-          --muted: #a2a8a5;
-          --surface: #121514;
-          --accent: #6fd8c4;
-          --accent-strong: #9ff0e0;
-          --rule: #2c3331;
-          --card: #191d1c;
-        }
-      }
-
-      body {
-        margin: 0;
-        padding: 48px 20px 96px;
-        background: var(--surface);
-        color: var(--text);
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        line-height: 1.65;
-        font-size: 16px;
-      }
-
-      main {
-        max-width: 44rem;
-        margin: 0 auto;
-      }
-
-      .brand {
-        font-size: 0.85rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--accent);
-        font-weight: 700;
-      }
-
-      h1 {
-        font-size: 2.2rem;
-        line-height: 1.15;
-        margin: 8px 0 12px;
-      }
-
-      h2 {
-        font-size: 1.15rem;
-        margin: 2.5rem 0 0.5rem;
-      }
-
-      p,
-      li {
-        margin: 0 0 0.85rem;
-      }
-
-      ul {
-        padding-left: 1.25rem;
-      }
-
-      .lede {
-        font-size: 1.1rem;
-        color: var(--muted);
-        max-width: 36rem;
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin: 28px 0 8px;
-      }
-
-      .button {
-        display: inline-block;
-        padding: 12px 22px;
-        border-radius: 10px;
-        font-weight: 600;
-        text-decoration: none;
-        background: var(--accent-strong);
-        color: #ffffff;
-      }
-
-      .button.secondary {
-        background: transparent;
-        color: var(--accent);
-        border: 1px solid var(--rule);
-      }
-
-      .card {
-        background: var(--card);
-        border: 1px solid var(--rule);
-        border-radius: 14px;
-        padding: 20px 24px;
-        margin: 24px 0;
-      }
-
-      .card h3 {
-        margin: 0 0 8px;
-        font-size: 1rem;
-      }
-
-      .grid {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      }
-
-      a {
-        color: var(--accent);
-      }
-
-      footer {
-        margin-top: 3rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--rule);
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
-    </style>
+    <link rel="stylesheet" href="site.css" />
+    <script src="site.js" defer></script>
   </head>
   <body>
-    <main>
-      <div class="brand">Chipbook</div>
-      <h1>A shared ledger for group fundraising.</h1>
-      <p class="lede">
+    <header class="site-header" id="header">
+      <div class="wrap nav">
+        <a class="brand" href="/">
+          <span class="mark" aria-hidden="true">✱</span>
+          Chipbook
+        </a>
+        <span class="spacer"></span>
+        <a class="btn btn-primary" href="/app/">Open Chipbook</a>
+      </div>
+    </header>
+
+    <main class="prose">
+      <h1>Chipbook</h1>
+      <p class="lede">A shared ledger for group fundraising.</p>
+      <p>
         Chipbook keeps the record of money raised with friends: who contributed
-        what, what has been approved, and what has been paid out. It never
-        holds, moves, or processes money.
+        what, what has been approved, and what has been paid out. It never holds,
+        moves, or processes money.
       </p>
 
       <div class="actions">
-        <a class="button" href="/app/">Open Chipbook</a>
-        <a class="button secondary" href="privacy.html">Privacy policy</a>
+        <a class="btn btn-primary" href="/app/">Open Chipbook</a>
+        <a class="btn btn-ghost" href="privacy.html">Privacy policy</a>
       </div>
 
       <div class="card">
         <h3>It is a record, not a wallet</h3>
-        <p style="margin: 0">
+        <p>
           There are no payments, wallets, balances, or custody features. You and
           your friends still move money between yourselves; Chipbook just keeps
           an honest shared note of what happened.
@@ -162,31 +48,31 @@
       </div>
 
       <h2>What it does</h2>
-      <div class="grid">
+      <div class="cards">
         <div class="card">
           <h3>Track contributions</h3>
-          <p style="margin: 0">
+          <p>
             Each fund has one currency and its own ledger of contributions,
             pending entries, and payouts.
           </p>
         </div>
         <div class="card">
           <h3>Approve together</h3>
-          <p style="margin: 0">
+          <p>
             Members can add entries; organizers approve them. Approved entries
             are append-only, so the record cannot be quietly rewritten.
           </p>
         </div>
         <div class="card">
           <h3>Correct honestly</h3>
-          <p style="margin: 0">
+          <p>
             Mistakes are fixed with reversal entries that keep a reason and the
             original amount, instead of editing history.
           </p>
         </div>
         <div class="card">
           <h3>Share with a role</h3>
-          <p style="margin: 0">
+          <p>
             Invite people as organizers, members, or observers. Everyone sees
             the same ledger; only organizers can approve or pay out.
           </p>
@@ -196,8 +82,14 @@
       <h2>How to start</h2>
       <ul>
         <li>Sign in with Google or with a one-time link sent to your email.</li>
-        <li>Create a fund, pick its currency, and choose a weekly, monthly, or one-off cadence.</li>
-        <li>Invite the people collecting with you as organizers, members, or observers.</li>
+        <li>
+          Create a fund, pick its currency, and choose a weekly, monthly, or
+          one-off cadence.
+        </li>
+        <li>
+          Invite the people collecting with you as organizers, members, or
+          observers.
+        </li>
         <li>Record contributions as they come in and approve them together.</li>
       </ul>
 
@@ -208,11 +100,22 @@
         questions, corrections, or to ask for your account to be deleted.
         Details are in the <a href="privacy.html">privacy policy</a>.
       </p>
-
-      <footer>
-        Chipbook is open source under the GPL-3.0 license. It is not a financial
-        service and does not provide financial advice.
-      </footer>
     </main>
+
+    <footer>
+      <div class="wrap footer-row">
+        <a class="brand" href="/">
+          <span class="mark" aria-hidden="true">✱</span>
+          Chipbook
+        </a>
+        <div class="footer-links">
+          <a href="privacy.html">Privacy</a>
+          <a href="about.html">About</a>
+          <a href="mailto:forapps2134@gmail.com">Contact</a>
+        </div>
+        <span class="spacer"></span>
+        <span>Open source under GPL-3.0. Not a financial service.</span>
+      </div>
+    </footer>
   </body>
 </html>

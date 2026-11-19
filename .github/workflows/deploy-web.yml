@@ -100,7 +100,7 @@ jobs:
             echo "::error::No web build output at build/web"
             exit 1
           }
-          for page in landing.html privacy.html about.html favicon.png; do
+          for page in landing.html privacy.html about.html favicon.png site.css site.js; do
             test -f "build/web/$page" || {
               echo "::error::web/$page is missing from the bundle"
               exit 1
@@ -112,6 +112,8 @@ jobs:
           cp build/site/app/privacy.html build/site/privacy.html
           cp build/site/app/about.html build/site/about.html
           cp build/site/app/favicon.png build/site/favicon.png
+          cp build/site/app/site.css build/site/site.css
+          cp build/site/app/site.js build/site/site.js
 
       - name: Install Vercel CLI
         run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}

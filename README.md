@@ -350,20 +350,22 @@ The deployed site has two halves:
 | `/app/` | the Flutter app | `flutter build web --base-href /app/` |
 | `/privacy.html` | privacy policy | `web/privacy.html` |
 | `/about.html` | longer product description | `web/about.html` |
+| `/site.css`, `/site.js` | shared styles and behaviour | `web/site.css`, `web/site.js` |
 
 The deploy workflow builds with `--base-href /app/`, moves the bundle into
 `build/site/app/`, and copies `landing.html` to the site root as `index.html`.
-`privacy.html`, `about.html` and `favicon.png` are copied to the root too,
-because the Google OAuth branding screen and the README point at those paths.
+`privacy.html`, `about.html`, `site.css`, `site.js` and `favicon.png` are copied
+to the root too, because the Google OAuth branding screen and the README point
+at those paths.
 
 **Auth depends on one detail.** Supabase's Site URL is the root, so a magic link
-lands on the landing page with `?code=…` in the query. `web/landing.html`
-forwards any auth parameters to `/app/` before rendering; removing that script
-breaks sign-in from email links without any error in the app itself.
+lands on the landing page with `?code=…` in the query. `web/site.js` forwards any
+auth parameters to `/app/` before rendering; removing that script breaks sign-in
+from email links without any error in the app itself.
 
-The landing page is deliberately plain HTML and CSS, with no build step and no
-JavaScript framework, so it stays fast, indexable by Google's OAuth reviewers,
-and immune to Flutter bundle changes.
+The landing page is deliberately plain HTML and CSS, in separate files with no
+build step and no JavaScript framework, so it stays fast, indexable by Google's
+OAuth reviewers, and immune to Flutter bundle changes.
 
 ### Domain and DNS
 
