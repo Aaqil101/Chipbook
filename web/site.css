@@ -553,6 +553,130 @@ h2 {
   margin: 28px 0 8px;
 }
 
+/* Page hero for about and privacy */
+.page-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 48px 0 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-hero::before {
+  content: "";
+  position: absolute;
+  inset: -60% -10% auto -10%;
+  height: 420px;
+  background: radial-gradient(
+    55% 70% at 25% 0%,
+    color-mix(in srgb, var(--brand) 18%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.page-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(80% 70% at 35% 0%, #000 25%, transparent);
+  pointer-events: none;
+}
+
+.page-hero .wrap {
+  position: relative;
+}
+
+.page-hero h1 {
+  font-size: clamp(2rem, 4.4vw, 2.9rem);
+  margin: 14px 0 10px;
+}
+
+.page-hero .lede {
+  max-width: 40rem;
+}
+
+/* Document layout with a sticky contents list */
+.doc-grid {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 48px;
+  padding: 40px 0 72px;
+}
+
+.toc {
+  position: sticky;
+  top: 88px;
+  align-self: start;
+  min-width: 0;
+  font-size: 0.88rem;
+}
+
+.toc h2 {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.toc ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.toc a:hover {
+  color: var(--brand);
+}
+
+.doc-grid .prose {
+  max-width: 40rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Landing section padding must not apply inside the prose column. */
+.doc-grid .prose section {
+  padding: 0;
+}
+
+.prose h2 {
+  scroll-margin-top: 92px;
+}
+
+.callout {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 22px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brand);
+  border-radius: 14px;
+}
+
+.callout .icon {
+  flex: none;
+}
+
+.callout p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
 /* Footer */
 footer {
   border-top: 1px solid var(--border);
@@ -596,6 +720,42 @@ footer {
 
   .cta {
     padding: 32px 24px;
+  }
+
+  .doc-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 32px 0 56px;
+  }
+
+  .toc {
+    position: static;
+    padding: 0 0 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .toc h2 {
+    margin-bottom: 10px;
+  }
+
+  .toc ol {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .toc li {
+    flex: none;
+  }
+
+  .toc a {
+    display: inline-block;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    white-space: nowrap;
   }
 }
 

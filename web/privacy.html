@@ -19,135 +19,200 @@
           <span class="mark" aria-hidden="true">✱</span>
           Chipbook
         </a>
+        <nav class="nav-links">
+          <a href="/#how">How it works</a>
+          <a href="/#what">What it does</a>
+          <a href="about.html">About</a>
+        </nav>
         <span class="spacer"></span>
         <a class="btn btn-primary" href="/app/">Open Chipbook</a>
       </div>
     </header>
 
-    <main class="prose">
-      <h1>Privacy policy</h1>
-      <p class="lede">
-        How the Chipbook web and Android app handle your data. Last updated 18
-        November 2026.
-      </p>
+    <div class="page-hero">
+      <div class="wrap">
+        <span class="pill"><i></i>Privacy · no tracking</span>
+        <h1>Privacy policy</h1>
+        <p class="lede">
+          How the Chipbook web and Android app handle your data. Last updated 18
+          November 2026.
+        </p>
+      </div>
+    </div>
 
-      <p>
-        Chipbook keeps a shared record of money raised with friends. It never
-        holds, moves, or processes money, and it has no payments, wallets, or
-        custody features. This page explains what it stores and why.
-      </p>
+    <main class="wrap">
+      <div class="doc-grid">
+        <aside class="toc" aria-label="Contents">
+          <h2>On this page</h2>
+          <ol>
+            <li><a href="#who">Who runs it</a></li>
+            <li><a href="#stored">What is stored</a></li>
+            <li><a href="#why">Why it is stored</a></li>
+            <li><a href="#visible">Who else can see it</a></li>
+            <li><a href="#services">Services used</a></li>
+            <li><a href="#cookies">Cookies and tracking</a></li>
+            <li><a href="#retention">Retention and deletion</a></li>
+            <li><a href="#children">Children</a></li>
+            <li><a href="#changes">Changes</a></li>
+            <li><a href="#terms">Terms of use</a></li>
+          </ol>
+        </aside>
 
-      <h2>Who runs it</h2>
-      <p>
-        Chipbook is a personal open-source project. Questions, corrections, and
-        deletion requests go to
-        <a href="mailto:forapps2134@gmail.com">forapps2134@gmail.com</a>.
-      </p>
+        <article class="prose">
+          <div class="callout">
+            <span class="icon">⛨</span>
+            <p>
+              <strong>In short:</strong> Chipbook stores what the shared ledger
+              needs and nothing else. No advertising cookies, no analytics, no
+              third-party trackers, and no money ever passes through the app.
+            </p>
+          </div>
 
-      <h2>What is stored</h2>
-      <ul>
-        <li>
-          <strong>Account details.</strong> Your email address, the sign-in
-          provider you used, and a username you choose. The username is visible
-          to other members of funds you join instead of your email address.
-        </li>
-        <li>
-          <strong>Fund records.</strong> Fund names, the currency and cadence you
-          pick, optional targets, membership and roles, and invite codes you
-          create.
-        </li>
-        <li>
-          <strong>Ledger entries.</strong> Amounts, the contributor name typed
-          in, optional reasons, the kind of entry, and timestamps. Approved
-          entries are append-only: they cannot be edited or deleted, and
-          corrections are recorded as new reversal entries.
-        </li>
-        <li>
-          <strong>Device storage.</strong> Your sign-in session and appearance
-          preference are kept in your browser's local storage or the app's local
-          preferences. No advertising or third-party tracking identifiers are
-          stored.
-        </li>
-      </ul>
+          <p>
+            Chipbook keeps a shared record of money raised with friends. It
+            never holds, moves, or processes money, and it has no payments,
+            wallets, or custody features. This page explains what it stores and
+            why.
+          </p>
 
-      <h2>Why it is stored</h2>
-      <p>
-        Only to run the app: to sign you in, to show a fund's ledger to its
-        members, and to keep the record consistent between them. There is no
-        marketing, profiling, or sale of data.
-      </p>
+          <section>
+            <h2 id="who">Who runs it</h2>
+            <p>
+              Chipbook is a personal open-source project. Questions,
+              corrections, and deletion requests go to
+              <a href="mailto:forapps2134@gmail.com">forapps2134@gmail.com</a>.
+            </p>
+          </section>
 
-      <h2>Who else can see it</h2>
-      <p>
-        Ledger entries and member handles are visible to the other members of
-        the same fund, including invitations you accept. Database access rules
-        restrict each account to the funds it belongs to. If you sign in with
-        Google, Google sees that you authenticated; it does not receive your
-        ledger data.
-      </p>
+          <section>
+            <h2 id="stored">What is stored</h2>
+            <ul>
+              <li>
+                <strong>Account details.</strong> Your email address, the
+                sign-in provider you used, and a username you choose. The
+                username is visible to other members of funds you join instead
+                of your email address.
+              </li>
+              <li>
+                <strong>Fund records.</strong> Fund names, the currency and
+                cadence you pick, optional targets, membership and roles, and
+                invite codes you create.
+              </li>
+              <li>
+                <strong>Ledger entries.</strong> Amounts, the contributor name
+                typed in, optional reasons, the kind of entry, and timestamps.
+                Approved entries are append-only: they cannot be edited or
+                deleted, and corrections are recorded as new reversal entries.
+              </li>
+              <li>
+                <strong>Device storage.</strong> Your sign-in session and
+                appearance preference are kept in your browser's local storage
+                or the app's local preferences. No advertising or third-party
+                tracking identifiers are stored.
+              </li>
+            </ul>
+          </section>
 
-      <h2>Services used</h2>
-      <ul>
-        <li>
-          <strong>Supabase</strong> hosts the database and authentication. Your
-          account and ledger records are stored there.
-        </li>
-        <li>
-          <strong>Vercel</strong> serves the web build and records standard
-          request logs.
-        </li>
-        <li>
-          <strong>Google</strong> provides optional sign-in. You can use an
-          emailed link instead and never involve Google.
-        </li>
-        <li>
-          <strong>The email provider</strong> used for sign-in links and invites
-          necessarily sees the recipient address and the message.
-        </li>
-      </ul>
+          <section>
+            <h2 id="why">Why it is stored</h2>
+            <p>
+              Only to run the app: to sign you in, to show a fund's ledger to
+              its members, and to keep the record consistent between them. There
+              is no marketing, profiling, or sale of data.
+            </p>
+          </section>
 
-      <h2>Cookies and tracking</h2>
-      <p>
-        Chipbook sets no advertising cookies and runs no analytics or tracking
-        scripts. The only client-side storage is what the app needs to keep you
-        signed in and to remember your appearance choice.
-      </p>
+          <section>
+            <h2 id="visible">Who else can see it</h2>
+            <p>
+              Ledger entries and member handles are visible to the other members
+              of the same fund, including invitations you accept. Database
+              access rules restrict each account to the funds it belongs to. If
+              you sign in with Google, Google sees that you authenticated; it
+              does not receive your ledger data.
+            </p>
+          </section>
 
-      <h2>Retention and deletion</h2>
-      <p>
-        Records stay while the fund exists. Organizers can archive a fund, which
-        makes it read-only, and can delete a fund that has no entries. To have
-        your account and its data removed, email the address above; archived
-        funds that others rely on may be retained in read-only form.
-      </p>
+          <section>
+            <h2 id="services">Services used</h2>
+            <ul>
+              <li>
+                <strong>Supabase</strong> hosts the database and authentication.
+                Your account and ledger records are stored there.
+              </li>
+              <li>
+                <strong>Vercel</strong> serves the web build and records standard
+                request logs.
+              </li>
+              <li>
+                <strong>Google</strong> provides optional sign-in. You can use an
+                emailed link instead and never involve Google.
+              </li>
+              <li>
+                <strong>The email provider</strong> used for sign-in links and
+                invites necessarily sees the recipient address and the message.
+              </li>
+            </ul>
+          </section>
 
-      <h2>Children</h2>
-      <p>
-        Chipbook is not directed at children under 13, and accounts should not
-        be created for them.
-      </p>
+          <section>
+            <h2 id="cookies">Cookies and tracking</h2>
+            <p>
+              Chipbook sets no advertising cookies and runs no analytics or
+              tracking scripts. The only client-side storage is what the app
+              needs to keep you signed in and to remember your appearance
+              choice.
+            </p>
+          </section>
 
-      <h2>Changes</h2>
-      <p>
-        If this policy changes, the date at the top of the page changes with it.
-        Continued use after an update means you accept the revised policy.
-      </p>
+          <section>
+            <h2 id="retention">Retention and deletion</h2>
+            <p>
+              Records stay while the fund exists. Organizers can archive a fund,
+              which makes it read-only, and can delete a fund that has no
+              entries. To have your account and its data removed, email the
+              address above; archived funds that others rely on may be retained
+              in read-only form.
+            </p>
+          </section>
 
-      <h2 id="terms">Terms of use</h2>
-      <p>
-        Chipbook is provided as-is, without warranty. It is a record-keeping
-        tool, not a financial service, and it is not a substitute for your own
-        records or for a bank statement. You are responsible for the accuracy of
-        what you and your fund's members enter, for keeping invite codes to
-        people you trust, and for using the app lawfully. Do not use it to
-        misrepresent money that changed hands.
-      </p>
-      <p>
-        The source code is open source under the GPL-3.0 license. The name and
-        the hosted service may be changed or discontinued at any time.
-      </p>
+          <section>
+            <h2 id="children">Children</h2>
+            <p>
+              Chipbook is not directed at children under 13, and accounts should
+              not be created for them.
+            </p>
+          </section>
 
-      <p><a href="/">Back to Chipbook</a></p>
+          <section>
+            <h2 id="changes">Changes</h2>
+            <p>
+              If this policy changes, the date at the top of the page changes
+              with it. Continued use after an update means you accept the
+              revised policy.
+            </p>
+          </section>
+
+          <section>
+            <h2 id="terms">Terms of use</h2>
+            <p>
+              Chipbook is provided as-is, without warranty. It is a
+              record-keeping tool, not a financial service, and it is not a
+              substitute for your own records or for a bank statement. You are
+              responsible for the accuracy of what you and your fund's members
+              enter, for keeping invite codes to people you trust, and for using
+              the app lawfully. Do not use it to misrepresent money that changed
+              hands.
+            </p>
+            <p>
+              The source code is open source under the GPL-3.0 license. The name
+              and the hosted service may be changed or discontinued at any time.
+            </p>
+          </section>
+
+          <p><a href="/">Back to Chipbook</a></p>
+        </article>
+      </div>
     </main>
 
     <footer>
