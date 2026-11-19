@@ -10,6 +10,13 @@ abstract interface class EntryRepository {
   /// Returns every entry in [fundId] in append order.
   Future<List<Entry>> getAll({required String fundId});
 
+  /// Returns the entries for every fund in [fundIds], grouped by fund id.
+  ///
+  /// One call for the whole dashboard, so Home never issues a query per fund.
+  /// Funds without entries are absent from the result rather than mapped to an
+  /// empty list.
+  Future<Map<String, List<Entry>>> getAllForFunds(Iterable<String> fundIds);
+
   /// Appends [entry].
   ///
   /// Throws an [ArgumentError] when an entry with the same id already
@@ -37,6 +44,24 @@ class InMemoryEntryRepository implements EntryRepository {
     return List<Entry>.unmodifiable(
       _entries.where((entry) => entry.fundId == fundId),
     );
+  }
+
+  @override
+  Future<Map<String, List<Entry>>> getAllForFunds(
+    Iterable<String> fundIds,
+  ) async {
+    final wanted = fundIds.toSet();
+    final grouped = <String, List<Entry>>{};
+    for (final entry in _entries) {
+      if (!wanted.contains(entry.fundId)) {
+        continue;
+      }
+      grouped.putIfAbsent(entry.fundId, () => <Entry>[]).add(entry);
+    }
+    return {
+      for (final pair in grouped.entries)
+        pair.key: List<Entry>.unmodifiable(pair.value),
+    };
   }
 
   @override

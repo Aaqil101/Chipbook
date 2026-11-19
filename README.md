@@ -237,12 +237,14 @@ somewhere durable.
 
 ## Using it
 
-1. Sign in with Google, or use an email link as a fallback. The first sign-in
-   asks for a username, which is what other members see; your email address is
-   never shown in a member list. **Home** lists every fund you can open; tap
-   one to view its ledger. Create a fund from Home and you become its first
-   organizer. Pick a one-off, weekly, monthly, or yearly cadence and an
-   optional target.
+1. A visitor sees a landing page describing Chipbook, then signs in with
+   Google or an email link. The first sign-in asks for a username, which is
+   what other members see; your email address is never shown in a member list.
+   **Home** greets you, counts active, archived, and pending work, and shows
+   each fund's raised, paid-out, and balance figures in that fund's own
+   currency. Tap a fund to view its ledger; create one from Home and you become
+   its first organizer. Pick a one-off, weekly, monthly, or yearly cadence and
+   an optional target.
 2. Add entries; they are recorded in the fund currency and start pending.
 3. Organizers approve pending entries. Approved entries count toward the
    fund balance.
@@ -423,8 +425,9 @@ fails before deploying when the token, org ID, or project ID is wrong.
   store.
 - `lib/state/` — `ChangeNotifier` controllers for auth, funds, the active
   ledger, and the signed-in profile.
-- `lib/screens/` — sign-in, profile setup, the home fund list, ledger,
-  add-entry form, members page, settings, about page, and dialogs.
+- `lib/screens/` - the landing page, sign-in, profile setup, the home
+  dashboard, ledger, add-entry form, members page, settings, about page, and
+  dialogs.
 - `supabase/migrations/` — schema, approval, immutable-entry, and
   last-organizer triggers, invite acceptance, fund archival, and RLS policies.
 - `supabase/tests/rls_test.sql` — executable role and RLS suite.

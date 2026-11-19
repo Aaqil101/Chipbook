@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../domain/fund_permissions.dart';
+import '../domain/home_dashboard.dart';
 import '../models/fund.dart';
 import '../repositories/invite_repository.dart';
 import '../repositories/membership_repository.dart';
@@ -21,6 +22,7 @@ class HomeShell extends StatefulWidget {
     required this.ledger,
     required this.fund,
     required this.funds,
+    required this.dashboard,
     required this.currentUserId,
     required this.currentUsername,
     required this.membershipRepository,
@@ -35,6 +37,7 @@ class HomeShell extends StatefulWidget {
     this.onRedeemInvite,
     this.onManageFund,
     this.onRestoreFund,
+    this.onRestoreArchivedFund,
     this.onAccessChanged,
     this.onSignOut,
   });
@@ -43,6 +46,9 @@ class HomeShell extends StatefulWidget {
   final LedgerController ledger;
   final Fund fund;
   final List<Fund> funds;
+
+  /// Per-fund figures for the Home tab.
+  final HomeDashboard dashboard;
   final List<Fund> archivedFunds;
   final String? currentUserId;
   final String currentUsername;
@@ -62,6 +68,9 @@ class HomeShell extends StatefulWidget {
   final VoidCallback? onRedeemInvite;
   final VoidCallback? onManageFund;
   final ValueChanged<Fund>? onRestoreFund;
+
+  /// Opens the chooser when more than one fund is archived.
+  final VoidCallback? onRestoreArchivedFund;
 
   /// Reloads the signed-in user's role after it may have changed.
   final VoidCallback? onAccessChanged;
@@ -102,13 +111,15 @@ class _HomeShellState extends State<HomeShell> {
           index: _tab.index,
           children: [
             HomePage(
-              funds: widget.funds,
+              dashboard: widget.dashboard,
+              username: widget.currentUsername,
               archivedFunds: widget.archivedFunds,
               activeFundId: widget.fund.id,
               onOpenFund: (fund) => unawaited(_openFund(fund)),
               onCreateFund: widget.onCreateFund,
               onRedeemInvite: widget.onRedeemInvite,
               onRestoreFund: widget.onRestoreFund,
+              onRestoreArchivedFund: widget.onRestoreArchivedFund,
             ),
             EntriesPage(
               controller: widget.ledger,

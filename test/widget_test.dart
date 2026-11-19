@@ -201,6 +201,40 @@ void main() {
     expect(find.text('Trip fund'), findsOneWidget);
   });
 
+  testWidgets('home shows each fund in its own currency', (tester) async {
+    final entries = InMemoryEntryRepository();
+    await entries.add(
+      _entry(id: 'usd', amountMinor: 2500, status: EntryStatus.approved),
+    );
+    await entries.add(
+      _entry(
+        id: 'jpy',
+        fundId: 'fund-b',
+        amountMinor: 1000,
+        currency: 'JPY',
+        status: EntryStatus.approved,
+      ),
+    );
+    await entries.add(
+      _entry(id: 'waiting', amountMinor: 300, status: EntryStatus.pending),
+    );
+
+    await _pumpSignedIn(
+      tester,
+      funds: [
+        _fund('fund-a', 'Trip fund'),
+        _fund('fund-b', 'Class fees', currency: 'JPY'),
+      ],
+      entries: entries,
+      openLedger: false,
+    );
+
+    expect(find.text('Hi, ada'), findsOneWidget);
+    expect(find.textContaining('Raised USD 25.00'), findsOneWidget);
+    expect(find.textContaining('Raised JPY 1,000'), findsOneWidget);
+    expect(find.text('1 pending approval'), findsOneWidget);
+  });
+
   testWidgets('home lists archived funds with a restore action', (
     tester,
   ) async {
@@ -219,7 +253,10 @@ void main() {
     expect(find.text('Archived'), findsOneWidget);
     expect(find.text('Old fund'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Restore Old fund'));
+    final restore = find.byTooltip('Restore Old fund');
+    await tester.ensureVisible(restore);
+    await tester.pumpAndSettle();
+    await tester.tap(restore);
     await tester.pumpAndSettle();
 
     expect(
@@ -1251,6 +1288,7 @@ Future<void> _chooseCadence(WidgetTester tester, String label) async {
 Fund _fund(
   String id,
   String name, {
+  String currency = 'USD',
   FundCadence cadence = FundCadence.oneOff,
   int? targetMinor,
   DateTime? archivedAt,
@@ -1258,7 +1296,7 @@ Fund _fund(
   return Fund(
     id: id,
     name: name,
-    defaultCurrency: 'USD',
+    defaultCurrency: currency,
     createdBy: 'user-1',
     createdAt: DateTime(2026, 1, 1),
     cadence: cadence,
@@ -1293,6 +1331,7 @@ Membership _membership(
 Entry _entry({
   required String id,
   required int amountMinor,
+  String fundId = 'fund-a',
   String currency = 'USD',
   EntryStatus status = EntryStatus.pending,
   EntryKind kind = EntryKind.contribution,
@@ -1300,7 +1339,7 @@ Entry _entry({
 }) {
   return Entry(
     id: id,
-    fundId: 'fund-a',
+    fundId: fundId,
     amountMinor: amountMinor,
     currency: currency,
     contributorName: 'Ada',

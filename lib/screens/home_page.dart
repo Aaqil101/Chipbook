@@ -1,23 +1,29 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../domain/home_dashboard.dart';
 import '../domain/money.dart';
 import '../models/fund.dart';
 
-/// Home destination: every fund the user can open, in one list.
+/// Home destination: a dashboard of the user's funds with live figures.
 class HomePage extends StatelessWidget {
   const HomePage({
     super.key,
-    required this.funds,
+    required this.dashboard,
+    required this.username,
     this.archivedFunds = const <Fund>[],
     this.activeFundId,
     this.onOpenFund,
     this.onCreateFund,
     this.onRedeemInvite,
     this.onRestoreFund,
+    this.onRestoreArchivedFund,
   });
 
-  /// Active funds, oldest first.
-  final List<Fund> funds;
+  /// Per-fund figures, built from one bulk entry read.
+  final HomeDashboard dashboard;
+
+  /// Shown in the greeting.
+  final String username;
 
   /// Archived funds, newest first.
   final List<Fund> archivedFunds;
@@ -29,8 +35,11 @@ class HomePage extends StatelessWidget {
   final VoidCallback? onCreateFund;
   final VoidCallback? onRedeemInvite;
 
-  /// Restores an archived fund.
+  /// Restores an archived fund from its own row.
   final ValueChanged<Fund>? onRestoreFund;
+
+  /// Opens the chooser when several funds are archived.
+  final VoidCallback? onRestoreArchivedFund;
 
   @override
   Widget build(BuildContext context) {
@@ -39,18 +48,45 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Funds')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
-          if (funds.isEmpty)
+          Text(
+            'Hi, $username',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            dashboard.isEmpty
+                ? 'Start a shared ledger for your group.'
+                : 'Here is where your funds stand today.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _Overview(
+            activeCount: dashboard.funds.length,
+            archivedCount: archivedFunds.length,
+            pendingCount: dashboard.pendingCount,
+          ),
+          const SizedBox(height: 24),
+          if (dashboard.isEmpty)
             _EmptyFunds(onCreateFund: onCreateFund)
           else ...[
-            _SectionHeader(title: 'Your funds', count: funds.length),
+            _SectionHeader(
+              title: 'Your funds',
+              count: dashboard.funds.length,
+            ),
             const SizedBox(height: 8),
-            for (final fund in funds)
-              _FundTile(
-                fund: fund,
-                isActive: fund.id == activeFundId,
-                onTap: onOpenFund == null ? null : () => onOpenFund!(fund),
+            for (final snapshot in dashboard.funds)
+              _FundCard(
+                snapshot: snapshot,
+                isActive: snapshot.fund.id == activeFundId,
+                onTap: onOpenFund == null
+                    ? null
+                    : () => onOpenFund!(snapshot.fund),
               ),
           ],
           if (archivedFunds.isNotEmpty) ...[
@@ -64,6 +100,17 @@ class HomePage extends StatelessWidget {
                     ? null
                     : () => onRestoreFund!(fund),
               ),
+            if (onRestoreArchivedFund != null) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onRestoreArchivedFund,
+                  icon: const Icon(Icons.unarchive_outlined),
+                  label: const Text('Restore an archived fund'),
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: 24),
           Align(
@@ -72,13 +119,6 @@ class HomePage extends StatelessWidget {
               onPressed: onRedeemInvite,
               icon: const Icon(Icons.mail_outline),
               label: const Text('Redeem an invite'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap a fund to open its ledger.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -95,26 +135,158 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _FundTile extends StatelessWidget {
-  const _FundTile({required this.fund, required this.isActive, this.onTap});
+/// Active, archived, and pending counts. No money is aggregated here.
+class _Overview extends StatelessWidget {
+  const _Overview({
+    required this.activeCount,
+    required this.archivedCount,
+    required this.pendingCount,
+  });
 
-  final Fund fund;
+  final int activeCount;
+  final int archivedCount;
+  final int pendingCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatCard(
+            label: 'Active',
+            value: '$activeCount',
+            icon: Icons.menu_book_outlined,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            label: 'Archived funds',
+            value: '$archivedCount',
+            icon: Icons.archive_outlined,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            label: 'Pending',
+            value: '$pendingCount',
+            icon: Icons.pending_actions_outlined,
+            highlight: pendingCount > 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final accent = highlight ? scheme.primary : scheme.onSurfaceVariant;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: accent),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 2,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FundCard extends StatelessWidget {
+  const _FundCard({
+    required this.snapshot,
+    required this.isActive,
+    this.onTap,
+  });
+
+  final FundSnapshot snapshot;
   final bool isActive;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final fund = snapshot.fund;
+    final currency = fund.defaultCurrency;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        isThreeLine: true,
         leading: Icon(
           isActive ? Icons.check_circle : Icons.menu_book_outlined,
-          color: isActive ? theme.colorScheme.primary : null,
+          color: isActive ? scheme.primary : null,
         ),
         title: Text(fund.name, overflow: TextOverflow.ellipsis),
-        subtitle: Text(_detail(fund)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_detail(fund)),
+              const SizedBox(height: 4),
+              Text(
+                'Raised ${Money.format(snapshot.raisedMinor, currency: currency)}'
+                ' · Paid ${Money.format(snapshot.paidOutMinor, currency: currency)}'
+                ' · Balance ${Money.format(snapshot.balanceMinor, currency: currency)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface,
+                ),
+              ),
+              if (snapshot.pendingCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${snapshot.pendingCount} pending approval',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
@@ -174,7 +346,7 @@ class _EmptyFunds extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
+      padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         children: [
           Icon(

@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app_info.dart';
 import '../auth/auth_controller.dart';
+import '../domain/home_dashboard.dart';
+import '../domain/ledger.dart';
 import '../models/fund.dart';
 import '../models/profile.dart';
 import '../repositories/entry_repository.dart';
@@ -98,11 +100,19 @@ class _SignedInPageState extends State<SignedInPage> {
         }
 
         final permissions = _funds.permissions;
+        final dashboard =
+            _funds.dashboard ??
+            HomeDashboard.fromSummaries(
+              funds: _funds.funds,
+              archivedFunds: _funds.archivedFunds,
+              summaries: const <String, LedgerSummary>{},
+            );
         return HomeShell(
           themes: widget.themes,
           ledger: ledger,
           fund: fund,
           funds: _funds.funds,
+          dashboard: dashboard,
           archivedFunds: _funds.archivedFunds,
           permissions: permissions,
           currentUserId: widget.auth.userId,
@@ -119,6 +129,7 @@ class _SignedInPageState extends State<SignedInPage> {
               ? () => unawaited(_manageFund(fund))
               : null,
           onRestoreFund: (fund) => unawaited(_restoreFund(fund)),
+          onRestoreArchivedFund: () => unawaited(_restoreArchivedFund()),
           onAccessChanged: () => unawaited(_refreshAccess(fund)),
           onSignOut: widget.auth.signOut,
         );

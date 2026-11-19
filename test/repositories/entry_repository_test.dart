@@ -32,6 +32,28 @@ void main() {
     expect(entries.map((entry) => entry.id), ['a']);
   });
 
+  test('getAllForFunds groups by fund and omits empty funds', () async {
+    await repository.add(_entry('a'));
+    await repository.add(_entry('b', fundId: 'fund-b'));
+    await repository.add(_entry('c', fundId: 'fund-b'));
+
+    final grouped = await repository.getAllForFunds([
+      _fundId,
+      'fund-b',
+      'fund-empty',
+    ]);
+
+    expect(grouped.keys, unorderedEquals([_fundId, 'fund-b']));
+    expect(grouped[_fundId]!.map((entry) => entry.id), ['a']);
+    expect(grouped['fund-b']!.map((entry) => entry.id), ['b', 'c']);
+  });
+
+  test('getAllForFunds asks for nothing when given no funds', () async {
+    await repository.add(_entry('a'));
+
+    expect(await repository.getAllForFunds(const <String>[]), isEmpty);
+  });
+
   test('rejects duplicate ids', () async {
     await repository.add(_entry('a'));
 

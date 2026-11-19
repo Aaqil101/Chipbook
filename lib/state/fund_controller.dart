@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../domain/fund_permissions.dart';
+import '../domain/home_dashboard.dart';
+import '../domain/ledger.dart';
+import '../models/entry.dart';
 import '../models/fund.dart';
 import '../models/fund_cadence.dart';
 import '../models/member_role.dart';
@@ -32,12 +35,17 @@ class FundController extends ChangeNotifier {
   MemberRole? _role;
   bool _isLoading = true;
   String? _error;
+  Map<String, LedgerSummary> _summaries = const <String, LedgerSummary>{};
+  HomeDashboard? _dashboard;
 
   /// Funds in use, oldest first.
   List<Fund> get funds => _funds;
 
   /// Funds the user archived, newest first.
   List<Fund> get archivedFunds => _archivedFunds;
+
+  /// Per-fund figures for the Home tab, once loaded.
+  HomeDashboard? get dashboard => _dashboard;
 
   Fund? get activeFund => _activeFund;
   LedgerController? get ledger => _ledger;
@@ -63,6 +71,7 @@ class FundController extends ChangeNotifier {
     try {
       final all = await _fundRepository.getFunds(includeArchived: true);
       _splitFunds(all);
+      await _loadSummaries();
       final preferredIndex = _funds.indexWhere(
         (fund) => fund.id == preferFundId,
       );
@@ -93,6 +102,14 @@ class FundController extends ChangeNotifier {
     );
 
     _funds = [..._funds, fund];
+    _summaries = {
+      ..._summaries,
+      fund.id: LedgerSummary.from(
+        const <Entry>[],
+        defaultCurrency: fund.defaultCurrency,
+      ),
+    };
+    _rebuildDashboard();
     await _activate(fund);
     notifyListeners();
     return fund;
@@ -155,11 +172,54 @@ class FundController extends ChangeNotifier {
   Future<void> _reloadFunds({String? preferredId}) async {
     final all = await _fundRepository.getFunds(includeArchived: true);
     _splitFunds(all);
+    await _loadSummaries();
     final preferredIndex = _funds.indexWhere((fund) => fund.id == preferredId);
     final selected = _funds.isEmpty
         ? null
         : _funds[preferredIndex == -1 ? 0 : preferredIndex];
     await _activate(selected);
+    notifyListeners();
+  }
+
+  /// Reads every active fund's entries in one call and summarises them.
+  Future<void> _loadSummaries() async {
+    if (_funds.isEmpty) {
+      _summaries = const <String, LedgerSummary>{};
+      _rebuildDashboard();
+      return;
+    }
+
+    final entriesByFund = await _entryRepository.getAllForFunds(
+      _funds.map((fund) => fund.id),
+    );
+    _summaries = {
+      for (final fund in _funds)
+        fund.id: LedgerSummary.from(
+          entriesByFund[fund.id] ?? const <Entry>[],
+          defaultCurrency: fund.defaultCurrency,
+        ),
+    };
+    _rebuildDashboard();
+  }
+
+  void _rebuildDashboard() {
+    _dashboard = HomeDashboard.fromSummaries(
+      funds: _funds,
+      archivedFunds: _archivedFunds,
+      summaries: _summaries,
+    );
+  }
+
+  /// Keeps the active fund's Home figures current as its ledger changes.
+  void _onLedgerChanged() {
+    final fund = _activeFund;
+    final ledger = _ledger;
+    if (fund == null || ledger == null || ledger.isLoading) {
+      return;
+    }
+
+    _summaries = {..._summaries, fund.id: ledger.summary};
+    _rebuildDashboard();
     notifyListeners();
   }
 
@@ -177,14 +237,17 @@ class FundController extends ChangeNotifier {
   Future<void> _activate(Fund? fund) async {
     _activeFund = fund;
     _role = null;
+    _ledger?.removeListener(_onLedgerChanged);
     _ledger?.dispose();
-    _ledger = fund == null
+    final ledger = fund == null
         ? null
         : LedgerController(
             _entryRepository,
             fundId: fund.id,
             currency: fund.defaultCurrency,
           );
+    ledger?.addListener(_onLedgerChanged);
+    _ledger = ledger;
 
     if (fund == null) {
       return;

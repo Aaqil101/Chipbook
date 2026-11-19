@@ -26,6 +26,32 @@ class SupabaseEntryRepository implements EntryRepository {
   }
 
   @override
+  Future<Map<String, List<Entry>>> getAllForFunds(
+    Iterable<String> fundIds,
+  ) async {
+    final ids = fundIds.toList();
+    if (ids.isEmpty) {
+      return const <String, List<Entry>>{};
+    }
+
+    try {
+      final rows = await _client
+          .from('entries')
+          .select()
+          .inFilter('fund_id', ids)
+          .order('created_at', ascending: false);
+      final grouped = <String, List<Entry>>{};
+      for (final row in rows) {
+        final entry = _entryFromRow(row);
+        grouped.putIfAbsent(entry.fundId, () => <Entry>[]).add(entry);
+      }
+      return grouped;
+    } on Object catch (error) {
+      throw supabaseFailure('Could not load the funds for home', error);
+    }
+  }
+
+  @override
   Future<void> add(Entry entry) async {
     try {
       await _client.from('entries').insert({
