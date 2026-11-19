@@ -351,6 +351,7 @@ The deployed site has two halves:
 | `/privacy.html` | privacy policy | `web/privacy.html` |
 | `/about.html` | longer product description | `web/about.html` |
 | `/site.css`, `/site.js` | shared styles and behaviour | `web/site.css`, `web/site.js` |
+| `/chipbook-icon.png` | the brand mark in the header and footer | `web/icons/Icon-192.png` |
 | `/flutter_service_worker.js` | retires the pre-split worker | `web/retire-service-worker.js` |
 
 The deploy workflow builds with `--base-href /app/`, moves the bundle into
