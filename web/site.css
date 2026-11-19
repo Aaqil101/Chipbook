@@ -166,6 +166,16 @@ img {
   border-color: var(--brand);
 }
 
+.btn-icon {
+  flex: none;
+  color: var(--muted);
+  transition: color 140ms ease;
+}
+
+.btn-ghost:hover .btn-icon {
+  color: var(--text);
+}
+
 .btn-inverse {
   background: var(--bg);
   color: var(--brand);
@@ -756,6 +766,21 @@ footer {
     border: 1px solid var(--border);
     border-radius: 999px;
     white-space: nowrap;
+  }
+}
+
+/* On a phone the header drops the GitHub label so both buttons still fit. */
+@media (max-width: 560px) {
+  .btn {
+    padding: 10px 16px;
+  }
+
+  .btn-github {
+    padding: 10px 12px;
+  }
+
+  .btn-github .btn-label {
+    display: none;
   }
 }
 
