@@ -32,6 +32,18 @@ AuthFailure authFailure(Object error) {
     }
 
     final message = error.message.trim();
+    final lowered = message.toLowerCase();
+    if (error.code == 'otp_expired' ||
+        lowered.contains('expired') ||
+        lowered.contains('invalid token') ||
+        lowered.contains('invalid otp')) {
+      return AuthFailure(
+        'That code is incorrect or has expired. '
+        'Check the email and try again, or send a new code.',
+        error,
+      );
+    }
+
     if (message.isNotEmpty) {
       return AuthFailure(message, error);
     }
@@ -46,7 +58,7 @@ AuthFailure authFailure(Object error) {
 /// Explains why a sign-in could not be completed.
 ///
 /// This arrives on the auth state stream rather than from a call the UI makes,
-/// and the raw text is usually about PKCE internals the user cannot act on.
+/// and the raw text is usually about internals the user cannot act on.
 AuthFailure signInFailure(Object error) {
   if (kDebugMode) {
     debugPrint('sign-in failed: $error');
@@ -57,14 +69,7 @@ AuthFailure signInFailure(Object error) {
 
     if (error.code == 'otp_expired' || message.contains('expired')) {
       return AuthFailure(
-        'That sign-in link has expired or was already used. Send a new one.',
-        error,
-      );
-    }
-
-    if (message.contains('code verifier')) {
-      return AuthFailure(
-        'That sign-in link cannot be used on this device. Send a new one.',
+        'That code has expired or was already used. Send a new one.',
         error,
       );
     }

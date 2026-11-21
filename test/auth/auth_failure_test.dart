@@ -26,7 +26,24 @@ void main() {
     expect(failure.message, contains('Check your connection'));
   });
 
-  test('an expired or reused link asks for a new one', () {
+  test('a wrong or expired code points at the email', () {
+    final wrong = authFailure(
+      const AuthException('Invalid token', statusCode: '403'),
+    );
+    final expired = authFailure(
+      const AuthException(
+        'Token has expired or is invalid',
+        statusCode: '403',
+        code: 'otp_expired',
+      ),
+    );
+
+    expect(wrong.message, contains('code is incorrect or has expired'));
+    expect(expired.message, contains('code is incorrect or has expired'));
+    expect(expired.message, contains('send a new code'));
+  });
+
+  test('an expired code on the auth stream asks for a new one', () {
     final failure = signInFailure(
       const AuthException(
         'Token has expired or is invalid',
@@ -35,15 +52,7 @@ void main() {
       ),
     );
 
-    expect(failure.message, contains('expired or was already used'));
-  });
-
-  test('a link from another device explains why it cannot be used', () {
-    final failure = signInFailure(
-      const AuthException('Code verifier could not be found in local storage.'),
-    );
-
-    expect(failure.message, contains('cannot be used on this device'));
+    expect(failure.message, contains('code has expired'));
   });
 
   test('an unexplained sign-in failure still asks the user to try again', () {

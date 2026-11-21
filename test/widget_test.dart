@@ -42,7 +42,7 @@ void main() {
     );
 
     expect(find.text('Continue with Google'), findsOneWidget);
-    expect(find.text('Send magic link'), findsOneWidget);
+    expect(find.text('Email me a sign-in code'), findsOneWidget);
     expect(find.text('No entries yet'), findsNothing);
   });
 
@@ -286,7 +286,7 @@ void main() {
     expect(find.text('No entries yet'), findsOneWidget);
   });
 
-  testWidgets('sending a magic link shows confirmation', (tester) async {
+  testWidgets('sending a sign-in code shows confirmation', (tester) async {
     final fake = FakeAuthService();
     final auth = AuthController(fake);
     addTearDown(fake.dispose);
@@ -305,7 +305,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextFormField), 'ada@example.com');
-    await tester.tap(find.text('Send magic link'));
+    await tester.tap(find.text('Email me a sign-in code'));
     await tester.pumpAndSettle();
 
     expect(fake.lastEmail, 'ada@example.com');
@@ -352,7 +352,7 @@ void main() {
     await _openSettings(tester);
     expect(find.text('@ada'), findsOneWidget);
     expect(find.text('ada@example.com'), findsOneWidget);
-    expect(find.text('Signed in with an email link'), findsOneWidget);
+    expect(find.text('Signed in with an email code'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Change username'));
     await tester.pumpAndSettle();
@@ -639,7 +639,7 @@ void main() {
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Send magic link'), findsOneWidget);
+    expect(find.text('Email me a sign-in code'), findsOneWidget);
     expect(find.text('Funds'), findsNothing);
   });
 
@@ -1369,7 +1369,12 @@ class FakeAuthService implements AuthService {
   Future<void> signInWithGoogle() async {}
 
   @override
-  Future<void> sendMagicLink(String email) async {
+  Future<void> sendSignInCode(String email) async {
+    lastEmail = email;
+  }
+
+  @override
+  Future<void> verifySignInCode(String email, String code) async {
     lastEmail = email;
   }
 

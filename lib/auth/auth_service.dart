@@ -21,7 +21,11 @@ abstract interface class AuthService {
 
   Future<void> signInWithGoogle();
 
-  Future<void> sendMagicLink(String email);
+  /// Emails a 6-digit sign-in code.
+  Future<void> sendSignInCode(String email);
+
+  /// Completes the sign-in with the code from [sendSignInCode].
+  Future<void> verifySignInCode(String email, String code);
 
   Future<void> signOut();
 }
@@ -86,11 +90,21 @@ class SupabaseAuthService implements AuthService {
   }
 
   @override
-  Future<void> sendMagicLink(String email) async {
+  Future<void> sendSignInCode(String email) async {
     try {
-      await _client.auth.signInWithOtp(
+      await _client.auth.signInWithOtp(email: email.trim());
+    } catch (error) {
+      throw authFailure(error);
+    }
+  }
+
+  @override
+  Future<void> verifySignInCode(String email, String code) async {
+    try {
+      await _client.auth.verifyOTP(
         email: email.trim(),
-        emailRedirectTo: authRedirect(),
+        token: code.trim(),
+        type: OtpType.email,
       );
     } catch (error) {
       throw authFailure(error);

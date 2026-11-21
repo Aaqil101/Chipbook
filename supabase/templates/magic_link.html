@@ -1,5 +1,5 @@
 <div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
-  Your one-time sign-in link for Chipbook. It expires in one hour.
+  Your one-time Chipbook sign-in code. It expires in one hour.
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#EEF4F2" style="margin:0;padding:0;background-color:#EEF4F2;">
@@ -22,19 +22,17 @@
           <td style="padding:24px 36px 0 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
             <h1 style="margin:0;font-size:26px;line-height:1.25;font-weight:800;color:#16211E;">Sign in to your ledger</h1>
             <p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#44514D;">
-              Use the button below to sign in. This link is valid for one hour and can only be used once.
+              Enter this code in Chipbook to sign in. It is valid for one hour and can only be used once.
             </p>
           </td>
         </tr>
 
         <tr>
-          <td align="left" style="padding:24px 36px 0 36px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <td align="center" style="padding:24px 36px 0 36px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #DCE7E4;border-radius:12px;background-color:#F4F9F7;">
               <tr>
-                <td align="center" bgcolor="#00695C" style="border-radius:10px;">
-                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;line-height:1;color:#ffffff;text-decoration:none;border-radius:10px;">
-                    Sign in to Chipbook
-                  </a>
+                <td align="center" style="padding:18px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:34px;font-weight:800;letter-spacing:10px;color:#004D40;">
+                  {{ .Token }}
                 </td>
               </tr>
             </table>
@@ -45,7 +43,7 @@
           <td style="padding:20px 36px 0 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
             <p style="margin:0;font-size:13px;line-height:1.6;color:#6B7874;">
               Requested for <span style="color:#16211E;font-weight:600;">{{ .Email }}</span>.
-              If this wasn’t you, ignore this email and the link will expire.
+              If this wasn’t you, ignore this email and the code will expire.
             </p>
           </td>
         </tr>

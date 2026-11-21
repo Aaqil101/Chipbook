@@ -38,9 +38,14 @@ class AuthController extends ChangeNotifier {
     return _service.signInWithGoogle();
   }
 
-  Future<void> sendMagicLink(String email) {
+  Future<void> sendSignInCode(String email) {
     clearFailure();
-    return _service.sendMagicLink(email);
+    return _service.sendSignInCode(email);
+  }
+
+  Future<void> verifySignInCode(String email, String code) {
+    clearFailure();
+    return _service.verifySignInCode(email, code);
   }
 
   Future<void> signOut() => _service.signOut();

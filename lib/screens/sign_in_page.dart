@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../app_info.dart';
@@ -5,7 +6,7 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_failure.dart';
 import '../domain/auth_validation.dart';
 
-/// Signs in with Google, or falls back to an email magic link.
+/// Signs in with Google, or falls back to an emailed 6-digit code.
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key, required this.auth});
 
@@ -16,9 +17,12 @@ class SignInPage extends StatefulWidget {
 }
 
 class _SignInPageState extends State<SignInPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _emailFormKey = GlobalKey<FormState>();
+  final _codeFormKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _codeController = TextEditingController();
   bool _sending = false;
+  bool _verifying = false;
   bool _openingGoogle = false;
   bool _sent = false;
   String? _error;
@@ -26,6 +30,7 @@ class _SignInPageState extends State<SignInPage> {
   @override
   void dispose() {
     _emailController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -56,8 +61,8 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
-  Future<void> _send() async {
-    if (!_formKey.currentState!.validate()) {
+  Future<void> _send({bool resend = false}) async {
+    if (!resend && !_emailFormKey.currentState!.validate()) {
       return;
     }
 
@@ -67,11 +72,19 @@ class _SignInPageState extends State<SignInPage> {
     });
 
     try {
-      await widget.auth.sendMagicLink(_emailController.text);
+      await widget.auth.sendSignInCode(_emailController.text);
       if (!mounted) {
         return;
       }
-      setState(() => _sent = true);
+      setState(() {
+        _sent = true;
+        _codeController.clear();
+      });
+      if (resend) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('A new code is on its way.')),
+        );
+      }
     } on AuthFailure catch (failure) {
       if (!mounted) {
         return;
@@ -83,13 +96,65 @@ class _SignInPageState extends State<SignInPage> {
       }
       setState(() {
         _error =
-            'Could not send the link. Check your connection and try again.';
+            'Could not send the code. Check your connection and try again.';
       });
     } finally {
       if (mounted) {
         setState(() => _sending = false);
       }
     }
+  }
+
+  Future<void> _verify() async {
+    if (!_codeFormKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _verifying = true;
+      _error = null;
+    });
+
+    try {
+      await widget.auth.verifySignInCode(
+        _emailController.text,
+        _codeController.text,
+      );
+    } on AuthFailure catch (failure) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = failure.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error =
+            'Could not check the code. Check your connection and try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _verifying = false);
+      }
+    }
+  }
+
+  void _startOver() {
+    widget.auth.clearFailure();
+    setState(() {
+      _sent = false;
+      _error = null;
+      _codeController.clear();
+    });
+  }
+
+  String? _codeError(String? value) {
+    final code = (value ?? '').trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      return 'Enter the 6-digit code from the email';
+    }
+    return null;
   }
 
   @override
@@ -118,7 +183,7 @@ class _SignInPageState extends State<SignInPage> {
     final busy = _sending || _openingGoogle;
 
     return Form(
-      key: _formKey,
+      key: _emailFormKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -184,11 +249,11 @@ class _SignInPageState extends State<SignInPage> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Send magic link'),
+                : const Text('Email me a sign-in code'),
           ),
           const SizedBox(height: 12),
           Text(
-            'We email you a one-time link. No password needed. '
+            'We email you a 6-digit code. No password needed. '
             'Check your spam folder if it does not arrive.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall,
@@ -199,6 +264,8 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Widget _sentConfirmation(ThemeData theme, String? error) {
+    final busy = _verifying || _sending;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -215,7 +282,7 @@ class _SignInPageState extends State<SignInPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'We sent a sign-in link to ${_emailController.text.trim()}.',
+          'We sent a 6-digit code to ${_emailController.text.trim()}.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium,
         ),
@@ -225,20 +292,57 @@ class _SignInPageState extends State<SignInPage> {
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall,
         ),
+        const SizedBox(height: 24),
+        Form(
+          key: _codeFormKey,
+          child: TextFormField(
+            controller: _codeController,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            textAlign: TextAlign.center,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 8,
+            ),
+            decoration: const InputDecoration(
+              labelText: '6-digit code',
+              hintText: '123456',
+            ),
+            validator: _codeError,
+            onFieldSubmitted: (_) => _verify(),
+          ),
+        ),
         if (error != null) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             error,
             textAlign: TextAlign.center,
             style: TextStyle(color: theme.colorScheme.error),
           ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: busy ? null : _verify,
+          child: _verifying
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Verify code'),
+        ),
+        const SizedBox(height: 8),
         TextButton(
-          onPressed: () {
-            widget.auth.clearFailure();
-            setState(() => _sent = false);
-          },
+          onPressed: busy ? null : () => _send(resend: true),
+          child: const Text('Resend code'),
+        ),
+        TextButton(
+          onPressed: _startOver,
           child: const Text('Use a different email'),
         ),
       ],

@@ -1,7 +1,7 @@
 // Chipbook site behaviour. Kept small: no framework, no build step.
 (function () {
-  // Auth links return to the Site URL, which is this landing page. Forward the
-  // result to the app so a session is never stranded on the marketing page.
+  // Google sign-in returns to the Site URL, which is this landing page. Forward
+  // the result to the app so a session is never stranded on the marketing page.
   var search = window.location.search || '';
   var hash = window.location.hash || '';
   var isAuth =

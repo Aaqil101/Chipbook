@@ -8,6 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class _FakeAuthService implements AuthService {
   final _changes = StreamController<bool>.broadcast();
 
+  String? lastEmail;
+  String? lastCode;
+
   @override
   bool get isSignedIn => false;
 
@@ -27,7 +30,15 @@ class _FakeAuthService implements AuthService {
   Future<void> signInWithGoogle() async {}
 
   @override
-  Future<void> sendMagicLink(String email) async {}
+  Future<void> sendSignInCode(String email) async {
+    lastEmail = email;
+  }
+
+  @override
+  Future<void> verifySignInCode(String email, String code) async {
+    lastEmail = email;
+    lastCode = code;
+  }
 
   @override
   Future<void> signOut() async {}
@@ -38,7 +49,7 @@ class _FakeAuthService implements AuthService {
 }
 
 void main() {
-  test('a link that cannot be exchanged is reported, not dropped', () async {
+  test('a failed sign-in is reported, not dropped', () async {
     final service = _FakeAuthService();
     final auth = AuthController(service);
     addTearDown(auth.dispose);
@@ -46,11 +57,15 @@ void main() {
     auth.addListener(() => notifications++);
 
     service.emitFailure(
-      const AuthException('Code verifier could not be found in local storage.'),
+      const AuthException(
+        'Token has expired or is invalid',
+        statusCode: '403',
+        code: 'otp_expired',
+      ),
     );
     await pumpEventQueue();
 
-    expect(auth.failure?.message, contains('cannot be used on this device'));
+    expect(auth.failure?.message, contains('expired'));
     expect(notifications, 1);
   });
 
@@ -78,8 +93,19 @@ void main() {
     service.emitFailure(const AuthException('Token has expired'));
     await pumpEventQueue();
 
-    await auth.sendMagicLink('you@example.com');
+    await auth.sendSignInCode('you@example.com');
 
     expect(auth.failure, isNull);
+  });
+
+  test('verifying a code passes the email and code to the service', () async {
+    final service = _FakeAuthService();
+    final auth = AuthController(service);
+    addTearDown(auth.dispose);
+
+    await auth.verifySignInCode('you@example.com', '123456');
+
+    expect(service.lastEmail, 'you@example.com');
+    expect(service.lastCode, '123456');
   });
 }

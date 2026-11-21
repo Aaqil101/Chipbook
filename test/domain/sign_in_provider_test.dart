@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('names the provider behind the session', () {
     expect(signInProviderLabel('google'), 'Signed in with Google');
-    expect(signInProviderLabel('email'), 'Signed in with an email link');
+    expect(signInProviderLabel('email'), 'Signed in with an email code');
   });
 
   test('falls back when the provider is unknown', () {

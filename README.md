@@ -8,7 +8,7 @@ money. It only keeps the record.
 
 Phase 2 is implemented on a hosted Supabase backend:
 
-- Google sign-in, with an email magic link as a fallback
+- Google sign-in, with an emailed 6-digit code as a fallback
 - A user-chosen username in the member list, with email addresses kept private
 - Multiple funds, with the creator becoming the first organizer
 - Organizer approvals and reversals with a required reason
@@ -97,20 +97,23 @@ are read-only and cannot receive entries, invites, or new members.
    - **Redirect URLs:** `http://127.0.0.1:8080`,
      `http://127.0.0.1:8080/**`, and `chipbook://login-callback`
 
-   The last entry returns magic links to the Android app; keep it even if you
-   only develop on the web.
+   The last entry returns Google sign-in to the Android app; keep it even if
+   you only develop on the web.
 
-   The email provider is enabled by default, and magic links expire after one
-   hour. Google sign-in returns through the same allow list, so no extra
-   redirect URL is needed. If you use a different local port or host, update
-   both values to match.
+   The email provider is enabled by default, and sign-in codes expire after one
+   hour. The hosted Magic Link email template must include `{{ .Token }}`,
+   because the app has no link fallback; `otp_length = 6` and
+   `otp_expiry = 3600` in `supabase/config.toml` are the values to mirror in
+   the dashboard. Google sign-in returns through the same allow list, so no
+   extra redirect URL is needed. If you use a different local port or host,
+   update both values to match.
 
    **Email fallback.** A hosted project sends auth mail through Supabase's
    built-in sender, which allows 2 emails per hour per project and only
    delivers to addresses in your organization. Anyone else fails with
    `email_address_not_authorized`. Add a custom SMTP provider under
    **Authentication > Emails > SMTP Settings** so friends outside the
-   organization can receive a link. The built-in sender is only for trying the
+   organization can receive a code. The built-in sender is only for trying the
    app yourself; `supabase start` serves the same flows locally through Mailpit
    with no email limit.
 
@@ -160,9 +163,12 @@ for templates: it would also push dev-only values such as the local Site URL and
 email rate limit.
 
 Email confirmation is off (`enable_confirmations = false`), so a first-time
-sign-in sends the magic-link template rather than a separate confirmation mail.
+sign-in sends the sign-in code template (the Magic Link template in the
+dashboard) rather than a separate confirmation mail.
 The confirmation template is kept so re-enabling confirmation still produces
-styled mail, and so local runs match the hosted project.
+styled mail, and so local runs match the hosted project. If confirmation is
+ever re-enabled, that template must also include `{{ .Token }}` and the app
+must accept the `signup` token type, or new users cannot finish signing in.
 
 Never commit SMTP credentials, Gmail App Passwords, OAuth client secrets, or
 the project's service key. Those belong only in the Supabase dashboard.
@@ -186,10 +192,10 @@ flutter run -d chrome --dart-define-from-file=.env
 
 ### Android
 
-The Android target uses Google sign-in or the same magic link. Supabase returns
-a sign-in to the app through the `chipbook://login-callback` deep link, so that
-URL must be in the project's redirect allow list (step 5 above). After the
-emulator is running:
+The Android target uses Google sign-in or an emailed 6-digit code. Google
+returns a sign-in to the app through the `chipbook://login-callback` deep link,
+so that URL must be in the project's redirect allow list (step 5 above). After
+the emulator is running:
 
 ```powershell
 flutter emulators --launch <emulator-id>
@@ -237,9 +243,9 @@ somewhere durable.
 
 ## Using it
 
-1. Sign in with Google or an email link. The first sign-in asks for a username,
-   which is what other members see; your email address is never shown in a
-   member list.
+1. Sign in with Google or an emailed 6-digit code. The first sign-in asks for a
+   username, which is what other members see; your email address is never
+   shown in a member list.
    **Home** greets you, counts active, archived, and pending work, and shows
    each fund's raised, paid-out, and balance figures in that fund's own
    currency. Tap a fund to view its ledger; create one from Home and you become
@@ -252,8 +258,8 @@ somewhere durable.
    payee and a reason, is approved immediately, and reduces the balance. A
    payout larger than the balance warns but is still recorded.
 5. Open **Members** to invite an email with a role, then copy the invite code.
-   The invitee signs in with that same address, through Google or a magic link,
-   and uses **Redeem an invite**.
+   The invitee signs in with that same address, through Google or an emailed
+   code, and uses **Redeem an invite**.
 6. To correct an approved entry, use **Reverse** and give a reason. The
    original stays visible and the reversal reduces the fund balance.
 7. Use the settings icon on the ledger, or **Settings > Manage fund**, to
@@ -319,11 +325,11 @@ own is required.
      `https://chipbook.aaqil.cc/**`
 
    Keep the local `http://127.0.0.1:8080` entries only if the Site URL is also
-   local; they are not consulted otherwise. Magic links and Google sign-in
-   return to the Site URL, so it must match the deployed origin.
+   local; they are not consulted otherwise. Google sign-in returns to the Site
+   URL, so it must match the deployed origin.
 
    The web build passes no `redirectTo`, because `authRedirect()` returns null
-   on the web, so the Site URL is always used. A sign-in started on
+   on the web, so the Site URL is always used. A Google sign-in started on
    `http://127.0.0.1:8080` therefore returns to the deployed host and fails the
    code exchange: the PKCE verifier is stored under the origin that requested
    it. Test auth against the deployed site, or point a second Supabase project
@@ -360,10 +366,10 @@ The deploy workflow builds with `--base-href /app/`, moves the bundle into
 to the root too, because the Google OAuth branding screen and the README point
 at those paths.
 
-**Auth depends on one detail.** Supabase's Site URL is the root, so a magic link
-lands on the landing page with `?code=…` in the query. `web/site.js` forwards any
-auth parameters to `/app/` before rendering; removing that script breaks sign-in
-from email links without any error in the app itself.
+**Auth depends on one detail.** Supabase's Site URL is the root, so Google OAuth
+returns to the landing page with `?code=…` in the query. `web/site.js` forwards
+auth parameters to `/app/` before rendering; removing that script breaks Google
+sign-in without any error in the app itself.
 
 **The service worker kill switch matters too.** Before the split, the app
 registered a worker at scope `/`, and a browser that installed it can keep

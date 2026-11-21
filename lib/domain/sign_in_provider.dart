@@ -4,7 +4,7 @@ String signInProviderLabel(String? provider) {
     case 'google':
       return 'Signed in with Google';
     case 'email':
-      return 'Signed in with an email link';
+      return 'Signed in with an email code';
     default:
       return 'Signed in';
   }

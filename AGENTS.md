@@ -8,7 +8,7 @@ balances, or custody features, ever.
 ## Current state (phase 2)
 - Web-first, with an Android target for phones and emulators. There is no
   `ios/` directory by design.
-- Hosted Supabase backend with magic-link auth, funds, per-fund roles,
+- Hosted Supabase backend with email-code auth, funds, per-fund roles,
   approvals, reversals, invites, and entries in the fund currency.
 - Data lives in Supabase. The in-memory entry repository is test-only.
 - Phase 2 is implemented (issues #11-#22); setup and deploy notes are in
@@ -46,8 +46,8 @@ rules.
 - `supabase/.temp/` contains linked-project state and is gitignored.
 - Supabase Auth needs a Site URL and redirect URLs matching the origin used to
   run the app (local `http://127.0.0.1:8080` or the deployed URL). The Android
-  app also needs `chipbook://login-callback` in the redirect allow list; the
-  magic link returns there through the intent filter in
+  app also needs `chipbook://login-callback` in the redirect allow list; Google
+  sign-in returns there through the intent filter in
   `android/app/src/main/AndroidManifest.xml`.
 
 ## Architecture rules
